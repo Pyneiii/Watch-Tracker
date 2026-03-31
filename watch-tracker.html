@@ -1,0 +1,461 @@
+import { useState, useEffect } from "react";
+
+const STORAGE_KEY = "watch-collection";
+
+const proxyImg = (src) => {
+  if (!src) return null;
+  if (src.startsWith("data:") || src.startsWith("blob:")) return src;
+  if (src.includes("wikimedia.org") || src.includes("wikipedia.org")) return src;
+  const stripped = src.replace(/^https?:\/\//, "");
+  return `https://images.weserv.nl/?url=${encodeURIComponent(stripped)}&w=400&h=300&fit=cover&output=jpg`;
+};
+
+const fmt = (n) => n ? `$${Number(n).toLocaleString()}` : "—";
+const emptyWatch = { brand: "", model: "", ref: "", retailPrice: "", greyPrice: "", image: "", notes: "", status: "owned" };
+
+const brandColors = {
+  "Rolex": ["#006039", "#FFD700"], "Omega": ["#1a3a6b", "#c0a060"],
+  "Patek Philippe": ["#1a2a4a", "#c8a84b"], "Audemars Piguet": ["#1c2b3a", "#c0a060"],
+  "IWC": ["#1a1a2e", "#a0b4c8"], "Jaeger-LeCoultre": ["#1a2a1a", "#c0b060"],
+  "Cartier": ["#2a1a1a", "#c8a0a0"], "Tag Heuer": ["#0a0a1a", "#e04040"],
+  "Breitling": ["#0a1a2a", "#4080c0"], "Panerai": ["#1a1a0a", "#c08040"],
+};
+
+const WatchPlaceholder = ({ brand, model }) => {
+  const colors = brandColors[brand] || ["#1a1a2e", "#a78bfa"];
+  return (
+    <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${colors[0]} 0%, #0d0d1a 100%)`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
+      <div style={{ width: 60, height: 60, borderRadius: "50%", border: `2px solid ${colors[1]}88`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>⌚</div>
+      {brand && <div style={{ color: colors[1], fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>{brand}</div>}
+      {model && <div style={{ color: "#64748b", fontSize: 10, textAlign: "center", maxWidth: 120 }}>{model}</div>}
+    </div>
+  );
+};
+
+const ImgWithFallback = ({ src, alt, brand, model }) => {
+  const [failed, setFailed] = useState(false);
+  const proxied = proxyImg(src);
+  if (!proxied || failed) return <WatchPlaceholder brand={brand} model={model} />;
+  return <img src={proxied} alt={alt} onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />;
+};
+
+async function lookupRefNumber(ref) {
+  const prompt = `You are a watch expert. Given the watch reference number "${ref}", search the web and return ONLY a JSON object (no markdown, no explanation) with:
+{
+  "brand": "manufacturer name",
+  "model": "model name",
+  "retailPrice": number or null,
+  "greyMarketPrice": number or null,
+  "notes": "brief descriptor e.g. dial color, case material, size",
+  "imageUrl": "a direct image URL from upload.wikimedia.org only — if not found on wikimedia, set null"
+}
+If you don't recognize the reference, return { "error": "not found" }.`;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, tools: [{ type: "web_search_20250305", name: "web_search" }], messages: [{ role: "user", content: prompt }] })
+  });
+  const data = await res.json();
+  const text = data.content?.map(b => b.type === "text" ? b.text : "").join("") || "";
+  return JSON.parse(text.replace(/```json|```/g, "").trim());
+}
+
+const WatchCard = ({ watch, onMove, onEdit, onDelete, moveLabel }) => {
+  const greyDiff = watch.retailPrice && watch.greyPrice ? ((watch.greyPrice - watch.retailPrice) / watch.retailPrice * 100).toFixed(0) : null;
+  const premium = greyDiff > 0;
+  return (
+    <div style={{ background: "#1a1a2e", border: "1px solid #2d2d4e", borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", transition: "transform 0.2s" }}
+      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
+      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
+      <div style={{ position: "relative", height: 200, background: "#0d0d1a", overflow: "hidden" }}>
+        <ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} />
+        <div style={{ position: "absolute", top: 8, right: 8, background: watch.status === "owned" ? "#16a34a" : "#7c3aed", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20 }}>
+          {watch.status === "owned" ? "OWNED" : "WISHLIST"}
+        </div>
+      </div>
+      <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div>
+          <div style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{watch.brand}</div>
+          <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 16 }}>{watch.model}</div>
+          <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>Ref: {watch.ref}</div>
+        </div>
+        {watch.notes && <div style={{ color: "#94a3b8", fontSize: 12, fontStyle: "italic" }}>{watch.notes}</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
+          <div style={{ background: "#0f0f23", borderRadius: 8, padding: "8px 10px" }}>
+            <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase" }}>Retail</div>
+            <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 14 }}>{fmt(watch.retailPrice)}</div>
+          </div>
+          <div style={{ background: "#0f0f23", borderRadius: 8, padding: "8px 10px" }}>
+            <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase" }}>Grey Market</div>
+            <div style={{ color: watch.greyPrice > watch.retailPrice ? "#f97316" : "#22c55e", fontWeight: 700, fontSize: 14 }}>{fmt(watch.greyPrice)}</div>
+            {greyDiff && <div style={{ fontSize: 10, color: premium ? "#f97316" : "#22c55e" }}>{premium ? `+${greyDiff}%` : `${greyDiff}%`} vs retail</div>}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+          <button onClick={() => onMove(watch.id)} style={{ flex: 1, padding: "7px 0", background: watch.status === "owned" ? "#7c3aed" : "#16a34a", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>→ {moveLabel}</button>
+          <button onClick={() => onEdit(watch)} style={{ padding: "7px 12px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>✏️</button>
+          <button onClick={() => onDelete(watch.id)} style={{ padding: "7px 12px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>🗑️</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Lightbox = ({ watch, onClose }) => (
+  <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#000000ee", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
+    <div onClick={e => e.stopPropagation()} style={{ background: "#1a1a2e", borderRadius: 16, overflow: "hidden", maxWidth: 500, width: "100%", border: "1px solid #2d2d4e", position: "relative" }}>
+      <div style={{ height: 360, background: "#0d0d1a" }}>
+        <ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} />
+      </div>
+      <div style={{ padding: "16px 20px" }}>
+        <div style={{ color: "#a78bfa", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{watch.brand}</div>
+        <div style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 20 }}>{watch.model}</div>
+        <div style={{ color: "#64748b", fontSize: 13, fontFamily: "monospace", marginBottom: 8 }}>Ref: {watch.ref}</div>
+        {watch.notes && <div style={{ color: "#94a3b8", fontSize: 13, fontStyle: "italic", marginBottom: 8 }}>{watch.notes}</div>}
+        <div style={{ display: "flex", gap: 12 }}>
+          <div><div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase" }}>Retail</div><div style={{ color: "#f1f5f9", fontWeight: 700 }}>{fmt(watch.retailPrice)}</div></div>
+          <div><div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase" }}>Grey</div><div style={{ color: watch.greyPrice > watch.retailPrice ? "#f97316" : "#22c55e", fontWeight: 700 }}>{fmt(watch.greyPrice)}</div></div>
+        </div>
+      </div>
+      <button onClick={onClose} style={{ position: "absolute", top: 12, right: 12, background: "#0f0f23cc", color: "#94a3b8", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 }}>✕</button>
+    </div>
+  </div>
+);
+
+const GalleryTab = ({ watches }) => {
+  const [selected, setSelected] = useState(new Set());
+  const [lightbox, setLightbox] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const filtered = watches.filter(w => filter === "all" || w.status === filter);
+  const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const showcased = selected.size > 0 ? watches.filter(w => selected.has(w.id)) : [];
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 4, background: "#0f0f23", borderRadius: 8, padding: 4 }}>
+          {[["all", "All"], ["owned", "✅ Owned"], ["wishlist", "🔮 Wishlist"]].map(([val, label]) => (
+            <button key={val} onClick={() => { setFilter(val); setSelected(new Set()); }}
+              style={{ padding: "6px 14px", background: filter === val ? "#7c3aed" : "transparent", color: filter === val ? "#fff" : "#64748b", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: filter === val ? 700 : 400 }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setSelected(new Set(filtered.map(w => w.id)))} style={{ padding: "6px 12px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Select All</button>
+        {selected.size > 0 && <button onClick={() => setSelected(new Set())} style={{ padding: "6px 12px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>Clear ({selected.size})</button>}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 32 }}>
+        {filtered.map(w => (
+          <div key={w.id} onClick={() => toggleSelect(w.id)}
+            style={{ cursor: "pointer", borderRadius: 10, overflow: "hidden", border: `2px solid ${selected.has(w.id) ? "#a78bfa" : "#1e293b"}`, background: "#0d0d1a", transition: "all 0.15s", position: "relative", height: 120 }}>
+            <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
+            {selected.has(w.id) && (
+              <div style={{ position: "absolute", top: 6, right: 6, background: "#a78bfa", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>✓</div>
+            )}
+            <div style={{ position: "absolute", top: 6, left: 6, background: w.status === "owned" ? "#16a34a" : "#7c3aed", borderRadius: 10, padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "#fff" }}>
+              {w.status === "owned" ? "OWN" : "WISH"}
+            </div>
+          </div>
+        ))}
+      </div>
+      {showcased.length > 0 && (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>✨ Showcase ({showcased.length})</h2>
+            <div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+            {[
+              { label: "Retail Total", val: fmt(showcased.reduce((s, w) => s + (w.retailPrice || 0), 0)), color: "#22c55e" },
+              { label: "Grey Total", val: fmt(showcased.reduce((s, w) => s + (w.greyPrice || 0), 0)), color: "#f97316" },
+              { label: "Best Price Total", val: fmt(showcased.reduce((s, w) => {
+                  const r = w.retailPrice || 0, g = w.greyPrice || 0;
+                  if (r && g) return s + Math.min(r, g);
+                  return s + (r || g);
+                }, 0)), color: "#60a5fa" },
+            ].map(s => (
+              <div key={s.label} style={{ background: "#0f0f23", border: "1px solid #1e293b", borderRadius: 10, padding: "8px 14px" }}>
+                <div style={{ color: "#64748b", fontSize: 10, textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ color: s.color, fontWeight: 700, fontSize: 16 }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+            {showcased.map(w => (
+              <div key={w.id} onClick={() => setLightbox(w)} style={{ cursor: "zoom-in", borderRadius: 12, overflow: "hidden", border: "1px solid #2d2d4e", background: "#0d0d1a", transition: "transform 0.2s", height: 200 }}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.02)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
+                <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {filtered.length === 0 && <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}><div style={{ fontSize: 40, marginBottom: 12 }}>🖼️</div><div style={{ fontSize: 16, color: "#475569" }}>No watches to display</div></div>}
+      {lightbox && <Lightbox watch={lightbox} onClose={() => setLightbox(null)} />}
+    </div>
+  );
+};
+
+export default function App() {
+  const [watches, setWatches] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [tab, setTab] = useState("collection");
+  const [view, setView] = useState("split");
+  const [lookupState, setLookupState] = useState("idle");
+  const [lookupMsg, setLookupMsg] = useState("");
+  const [showExport, setShowExport] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try { const res = await window.storage.get(STORAGE_KEY); if (res?.value) setWatches(JSON.parse(res.value)); } catch (_) {}
+      setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    (async () => { try { await window.storage.set(STORAGE_KEY, JSON.stringify(watches)); } catch (_) {} })();
+  }, [watches, loaded]);
+
+  const owned = watches.filter(w => w.status === "owned");
+  const wishlist = watches.filter(w => w.status === "wishlist");
+  const moveWatch = (id) => setWatches(ws => ws.map(w => w.id === id ? { ...w, status: w.status === "owned" ? "wishlist" : "owned" } : w));
+  const deleteWatch = (id) => setWatches(ws => ws.filter(w => w.id !== id));
+  const openAdd = (defaultStatus = "owned") => { setModal({ watch: { ...emptyWatch, status: defaultStatus }, isNew: true }); setLookupState("idle"); setLookupMsg(""); };
+  const openEdit = (watch) => { setModal({ watch: { ...watch }, isNew: false }); setLookupState("idle"); setLookupMsg(""); };
+
+  const handleLookup = async () => {
+    const ref = modal?.watch?.ref?.trim();
+    if (!ref) return;
+    setLookupState("loading"); setLookupMsg("");
+    try {
+      const result = await lookupRefNumber(ref);
+      if (result.error) { setLookupState("error"); setLookupMsg("Reference not recognized. Fill in details manually."); return; }
+      setModal(m => ({ ...m, watch: { ...m.watch, brand: result.brand || m.watch.brand, model: result.model || m.watch.model, retailPrice: result.retailPrice ?? m.watch.retailPrice, greyPrice: result.greyMarketPrice ?? m.watch.greyPrice, notes: result.notes || m.watch.notes, image: m.watch.image || result.imageUrl || "" } }));
+      setLookupState("done");
+      setLookupMsg(result.imageUrl ? "Fields auto-filled including image!" : "Fields auto-filled — no image found, upload one below.");
+    } catch (e) { setLookupState("error"); setLookupMsg("Lookup failed. Check reference and try again."); }
+  };
+
+  const saveWatch = () => {
+    const w = modal.watch;
+    if (!w.brand || !w.model) return;
+    const parsed = { ...w, retailPrice: w.retailPrice ? Number(String(w.retailPrice).replace(/[^0-9]/g, "")) : null, greyPrice: w.greyPrice ? Number(String(w.greyPrice).replace(/[^0-9]/g, "")) : null };
+    if (modal.isNew) setWatches(ws => [...ws, { ...parsed, id: Date.now() }]);
+    else setWatches(ws => ws.map(w => w.id === parsed.id ? parsed : w));
+    setModal(null);
+  };
+
+  const totalOwnedRetail = owned.reduce((s, w) => s + (w.retailPrice || 0), 0);
+  const totalOwnedGrey = owned.reduce((s, w) => s + (w.greyPrice || 0), 0);
+  const totalWishRetail = wishlist.reduce((s, w) => s + (w.retailPrice || 0), 0);
+
+  if (!loaded) return <div style={{ minHeight: "100vh", background: "#0a0a1a", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}>Loading…</div>;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0a1a", color: "#f1f5f9", fontFamily: "system-ui, sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderBottom: "1px solid #1e293b", padding: "20px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, background: "linear-gradient(90deg, #a78bfa, #60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>⌚ Watch Tracker</h1>
+              <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>{owned.length} owned · {wishlist.length} on wishlist</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {tab === "collection" && <>
+                <button onClick={() => setView(v => v === "split" ? "all" : "split")} style={{ padding: "8px 16px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
+                  {view === "split" ? "🗂 All Together" : "↕ Split View"}
+                </button>
+                <button onClick={() => openAdd("owned")} style={{ padding: "8px 16px", background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>+ Add Watch</button>
+              </>}
+              <button onClick={() => {
+                const json = JSON.stringify(watches, null, 2);
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = `watches-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); URL.revokeObjectURL(url);
+              }} style={{ padding: "8px 16px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>⬇ Export</button>
+              <label style={{ padding: "8px 16px", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>
+                ⬆ Import
+                <input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={async e => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    if (Array.isArray(data)) {
+                      setWatches(data);
+                      await window.storage.set(STORAGE_KEY, JSON.stringify(data));
+                      alert(`✅ Imported ${data.length} watches!`);
+                    } else { alert("❌ Invalid file format."); }
+                  } catch { alert("❌ Could not read file."); }
+                  e.target.value = "";
+                }} />
+              </label>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+            {[{ label: "Collection Retail", val: fmt(totalOwnedRetail), color: "#22c55e" }, { label: "Collection Grey Value", val: fmt(totalOwnedGrey), color: "#f97316" }, { label: "Wishlist Retail", val: fmt(totalWishRetail), color: "#a78bfa" }].map(s => (
+              <div key={s.label} style={{ background: "#0f0f23", border: "1px solid #1e293b", borderRadius: 10, padding: "10px 16px" }}>
+                <div style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ color: s.color, fontWeight: 700, fontSize: 18 }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 4, marginTop: 20 }}>
+            {[["collection", "📋 Collection"], ["gallery", "🖼️ Gallery"]].map(([t, label]) => (
+              <button key={t} onClick={() => setTab(t)}
+                style={{ padding: "8px 20px", background: tab === t ? "#7c3aed" : "#0f0f23", color: tab === t ? "#fff" : "#64748b", border: `1px solid ${tab === t ? "#7c3aed" : "#1e293b"}`, borderRadius: "8px 8px 0 0", cursor: "pointer", fontSize: 13, fontWeight: tab === t ? 700 : 400, marginBottom: -1 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px" }}>
+        {tab === "gallery" ? (
+          <GalleryTab watches={watches} />
+        ) : watches.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "80px 20px", color: "#334155" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⌚</div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#475569" }}>No watches yet</div>
+            <button onClick={() => openAdd("owned")} style={{ padding: "10px 24px", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700 }}>+ Add First Watch</button>
+          </div>
+        ) : view === "split" ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#22c55e" }}>✅ My Collection ({owned.length})</h2>
+                <button onClick={() => openAdd("owned")} style={{ padding: "5px 12px", background: "#16a34a22", color: "#22c55e", border: "1px solid #16a34a44", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>+ Add</button>
+              </div>
+              {owned.length === 0 && <div style={{ color: "#334155", textAlign: "center", padding: 40 }}>No watches yet</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {owned.map(w => <WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Wishlist" />)}
+              </div>
+            </div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#a78bfa" }}>🔮 Considering ({wishlist.length})</h2>
+                <button onClick={() => openAdd("wishlist")} style={{ padding: "5px 12px", background: "#7c3aed22", color: "#a78bfa", border: "1px solid #7c3aed44", borderRadius: 8, cursor: "pointer", fontSize: 12 }}>+ Add</button>
+              </div>
+              {wishlist.length === 0 && <div style={{ color: "#334155", textAlign: "center", padding: 40 }}>Nothing on wishlist</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {wishlist.map(w => <WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Collection" />)}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <h2 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: "#60a5fa" }}>All Watches ({watches.length})</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+              {watches.map(w => <WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel={w.status === "owned" ? "Move to Wishlist" : "Move to Collection"} />)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      {modal && (
+        <div style={{ position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
+          <div style={{ background: "#1a1a2e", border: "1px solid #2d2d4e", borderRadius: 16, padding: 24, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ margin: "0 0 6px", color: "#f1f5f9" }}>{modal.isNew ? "Add Watch" : "Edit Watch"}</h3>
+            <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: 13 }}>Enter a reference number and click <strong style={{ color: "#a78bfa" }}>Look Up</strong> to auto-fill details.</p>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Reference Number</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={modal.watch.ref || ""} onChange={e => setModal(m => ({ ...m, watch: { ...m.watch, ref: e.target.value } }))} placeholder="e.g. 126610LN" onKeyDown={e => e.key === "Enter" && handleLookup()}
+                  style={{ flex: 1, padding: "9px 12px", background: "#0f0f23", border: "1px solid #2d3748", borderRadius: 8, color: "#f1f5f9", fontSize: 14 }} />
+                <button onClick={handleLookup} disabled={lookupState === "loading"}
+                  style={{ padding: "9px 16px", background: lookupState === "loading" ? "#4c1d95" : "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: lookupState === "loading" ? "not-allowed" : "pointer", fontSize: 13, whiteSpace: "nowrap" }}>
+                  {lookupState === "loading" ? "⏳ Looking up…" : "✨ Look Up"}
+                </button>
+              </div>
+              {lookupMsg && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: lookupState === "done" ? "#14532d33" : "#7f1d1d33", border: `1px solid ${lookupState === "done" ? "#16a34a44" : "#dc262644"}`, borderRadius: 8, color: lookupState === "done" ? "#4ade80" : "#f87171", fontSize: 12 }}>
+                  {lookupState === "done" ? "✅ " : "⚠️ "}{lookupMsg}
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "16px 0" }}>
+              <div style={{ flex: 1, height: 1, background: "#1e293b" }} /><span style={{ color: "#475569", fontSize: 11 }}>or fill in manually</span><div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+            </div>
+            {[{ key: "brand", label: "Brand", placeholder: "e.g. Rolex" }, { key: "model", label: "Model", placeholder: "e.g. Submariner Date" }, { key: "retailPrice", label: "Retail Price ($)", placeholder: "10100" }, { key: "greyPrice", label: "Grey Market Price ($)", placeholder: "13500" }, { key: "notes", label: "Notes", placeholder: "Optional notes..." }].map(f => (
+              <div key={f.key} style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>{f.label}</label>
+                <input value={modal.watch[f.key] || ""} onChange={e => setModal(m => ({ ...m, watch: { ...m.watch, [f.key]: e.target.value } }))} placeholder={f.placeholder}
+                  style={{ width: "100%", padding: "9px 12px", background: "#0f0f23", border: "1px solid #2d3748", borderRadius: 8, color: "#f1f5f9", fontSize: 14, boxSizing: "border-box" }} />
+              </div>
+            ))}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Watch Image</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <label style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "9px 12px", background: "#0f0f23", border: "2px dashed #2d3748", borderRadius: 8, cursor: "pointer", color: "#94a3b8", fontSize: 13 }}>
+                  <span>📁</span><span>Browse Files</span>
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => setModal(m => ({ ...m, watch: { ...m.watch, image: ev.target.result } }));
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+                <label style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "9px 12px", background: "#0f0f23", border: "2px dashed #2d3748", borderRadius: 8, cursor: "pointer", color: "#94a3b8", fontSize: 13 }}>
+                  <span>📷</span><span>Camera / Photos</span>
+                  <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => setModal(m => ({ ...m, watch: { ...m.watch, image: ev.target.result } }));
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1, height: 1, background: "#1e293b" }} /><span style={{ color: "#475569", fontSize: 11 }}>or paste a URL</span><div style={{ flex: 1, height: 1, background: "#1e293b" }} />
+              </div>
+              <input value={modal.watch.image?.startsWith("data:") ? "" : (modal.watch.image || "")} onChange={e => setModal(m => ({ ...m, watch: { ...m.watch, image: e.target.value } }))} placeholder="https://..."
+                style={{ width: "100%", padding: "9px 12px", background: "#0f0f23", border: "1px solid #2d3748", borderRadius: 8, color: "#f1f5f9", fontSize: 14, boxSizing: "border-box" }} />
+              {modal.watch.image && (
+                <div style={{ marginTop: 8, height: 100, borderRadius: 8, overflow: "hidden", border: "1px solid #2d3748", position: "relative" }}>
+                  <ImgWithFallback src={modal.watch.image} alt="preview" brand={modal.watch.brand} model={modal.watch.model} />
+                  <button onClick={() => setModal(m => ({ ...m, watch: { ...m.watch, image: "" } }))} style={{ position: "absolute", top: 4, right: 4, background: "#0f0f23cc", color: "#94a3b8", border: "none", borderRadius: 6, padding: "2px 7px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                </div>
+              )}
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Status</label>
+              <select value={modal.watch.status} onChange={e => setModal(m => ({ ...m, watch: { ...m.watch, status: e.target.value } }))}
+                style={{ width: "100%", padding: "9px 12px", background: "#0f0f23", border: "1px solid #2d3748", borderRadius: 8, color: "#f1f5f9", fontSize: 14 }}>
+                <option value="owned">Owned</option>
+                <option value="wishlist">Wishlist / Considering</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={saveWatch} style={{ flex: 1, padding: "10px 0", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>{modal.isNew ? "Add Watch" : "Save Changes"}</button>
+              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "10px 0", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExport && (
+        <div style={{ position: "fixed", inset: 0, background: "#000000aa", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
+          <div style={{ background: "#1a1a2e", border: "1px solid #2d2d4e", borderRadius: 16, padding: 24, width: "100%", maxWidth: 480 }}>
+            <h3 style={{ margin: "0 0 8px", color: "#f1f5f9" }}>⬇ Export Collection</h3>
+            <p style={{ margin: "0 0 16px", color: "#64748b", fontSize: 13 }}>Copy the text below and save it as a <strong style={{ color: "#94a3b8" }}>watches.json</strong> file, then import it on any other device.</p>
+            <textarea readOnly value={JSON.stringify(watches, null, 2)}
+              style={{ width: "100%", height: 200, background: "#0f0f23", border: "1px solid #2d3748", borderRadius: 8, color: "#94a3b8", fontSize: 11, fontFamily: "monospace", padding: 10, boxSizing: "border-box", resize: "none" }} />
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button onClick={() => { navigator.clipboard.writeText(JSON.stringify(watches, null, 2)); alert("✅ Copied to clipboard!"); }}
+                style={{ flex: 1, padding: "10px 0", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer" }}>📋 Copy to Clipboard</button>
+              <button onClick={() => setShowExport(false)}
+                style={{ flex: 1, padding: "10px 0", background: "#1e293b", color: "#94a3b8", border: "1px solid #2d3748", borderRadius: 8, cursor: "pointer" }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
