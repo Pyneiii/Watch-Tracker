@@ -4,362 +4,528 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Watch Tracker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0a0a1a; color: #f1f5f9; font-family: system-ui, sans-serif; min-height: 100vh; }
-  input, select, textarea, button { font-family: inherit; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0f0f23; } ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a1a;color:#f1f5f9;font-family:system-ui,sans-serif;min-height:100vh}
+input,select,textarea,button{font-family:inherit}
+button{cursor:pointer}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid #1e293b;padding:20px 24px}
+.header-inner{max-width:1200px;margin:0 auto}
+.header-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+h1{font-size:24px;font-weight:800;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{color:#64748b;font-size:13px;margin-top:4px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:8px;border:1px solid #2d3748;background:#1e293b;color:#94a3b8;font-size:13px}
+.btn:hover{background:#2d3748}
+.btn-green{background:#16a34a;color:#fff;border-color:#16a34a;font-weight:600}
+.btn-green:hover{background:#15803d}
+.btn-purple{background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700}
+.btn-purple:hover{background:#6d28d9}
+.stats{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+.stat-box{background:#0f0f23;border:1px solid #1e293b;border-radius:10px;padding:10px 16px}
+.stat-label{color:#64748b;font-size:11px;text-transform:uppercase}
+.stat-val{font-weight:700;font-size:18px}
+.tabs{display:flex;gap:4px;margin-top:20px}
+.tab{padding:8px 20px;border-radius:8px 8px 0 0;border:1px solid #1e293b;background:#0f0f23;color:#64748b;font-size:13px;margin-bottom:-1px}
+.tab.active{background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700}
+.content{max-width:1200px;margin:0 auto;padding:24px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.col-title-green{font-size:16px;font-weight:700;color:#22c55e}
+.col-title-purple{font-size:16px;font-weight:700;color:#a78bfa}
+.col-title-blue{font-size:16px;font-weight:700;color:#60a5fa}
+.btn-sm-green{padding:5px 12px;background:#16a34a22;color:#22c55e;border:1px solid #16a34a44;border-radius:8px;font-size:12px}
+.btn-sm-purple{padding:5px 12px;background:#7c3aed22;color:#a78bfa;border:1px solid #7c3aed44;border-radius:8px;font-size:12px}
+.cards{display:flex;flex-direction:column;gap:16px}
+.all-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{background:#1a1a2e;border:1px solid #2d2d4e;border-radius:12px;overflow:hidden;transition:transform 0.2s}
+.card:hover{transform:translateY(-2px)}
+.card-img{position:relative;height:200px;background:#0d0d1a;overflow:hidden}
+.card-img img{width:100%;height:100%;object-fit:cover;opacity:0.9}
+.badge{position:absolute;top:8px;right:8px;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.badge-green{background:#16a34a}
+.badge-purple{background:#7c3aed}
+.card-body{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.card-brand{color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.card-model{color:#f1f5f9;font-weight:700;font-size:16px}
+.card-ref{color:#64748b;font-size:12px;font-family:monospace}
+.card-notes{color:#94a3b8;font-size:12px;font-style:italic}
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.price-box{background:#0f0f23;border-radius:8px;padding:8px 10px}
+.price-lbl{color:#64748b;font-size:10px;text-transform:uppercase}
+.price-val{font-weight:700;font-size:14px}
+.price-diff{font-size:10px}
+.card-actions{display:flex;gap:6px;margin-top:8px}
+.btn-move{flex:1;padding:7px 0;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600}
+.btn-icon{padding:7px 12px;background:#1e293b;color:#94a3b8;border:1px solid #2d3748;border-radius:8px;font-size:12px}
+.empty{color:#334155;text-align:center;padding:40px}
+.empty-big{text-align:center;padding:80px 20px;color:#334155}
+.empty-big .icon{font-size:48px;margin-bottom:16px}
+.empty-big .title{font-size:18px;font-weight:700;color:#475569;margin-bottom:8px}
+/* Placeholder */
+.placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.placeholder-ring{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.placeholder-brand{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.placeholder-model{font-size:10px;text-align:center;max-width:120px;color:#64748b}
+/* Modal */
+.overlay{position:fixed;inset:0;background:#000000aa;display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal{background:#1a1a2e;border:1px solid #2d2d4e;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal h3{color:#f1f5f9;margin-bottom:6px}
+.modal p{color:#64748b;font-size:13px;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;color:#94a3b8;font-size:12px;margin-bottom:4px}
+.form-input{width:100%;padding:9px 12px;background:#0f0f23;border:1px solid #2d3748;border-radius:8px;color:#f1f5f9;font-size:14px}
+.form-input:focus{outline:none;border-color:#7c3aed}
+.divider{display:flex;align-items:center;gap:8px;margin:16px 0}
+.divider-line{flex:1;height:1px;background:#1e293b}
+.divider-text{color:#475569;font-size:11px}
+.upload-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#0f0f23;border:2px dashed #2d3748;border-radius:8px;cursor:pointer;color:#94a3b8;font-size:13px;margin-bottom:8px;width:100%}
+.img-preview{margin-top:8px;height:100px;border-radius:8px;overflow:hidden;border:1px solid #2d3748;position:relative}
+.img-preview img{width:100%;height:100%;object-fit:cover}
+.img-clear{position:absolute;top:4px;right:4px;background:#0f0f23cc;color:#94a3b8;border:none;border-radius:6px;padding:2px 7px;font-size:12px}
+.modal-actions{display:flex;gap:10px}
+.lookup-row{display:flex;gap:8px}
+.lookup-msg{margin-top:8px;padding:8px 12px;border-radius:8px;font-size:12px}
+.lookup-ok{background:#14532d33;border:1px solid #16a34a44;color:#4ade80}
+.lookup-err{background:#7f1d1d33;border:1px solid #dc262644;color:#f87171}
+/* Gallery */
+.gallery-controls{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px;background:#0f0f23;border-radius:8px;padding:4px}
+.filter-btn{padding:6px 14px;border:none;border-radius:6px;font-size:13px}
+.filter-btn.active{background:#7c3aed;color:#fff;font-weight:700}
+.filter-btn:not(.active){background:transparent;color:#64748b}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:32px}
+.gallery-thumb{cursor:pointer;border-radius:10px;overflow:hidden;border:2px solid #1e293b;background:#0d0d1a;position:relative;height:120px;transition:border-color 0.15s}
+.gallery-thumb.selected{border-color:#a78bfa}
+.gallery-thumb img{width:100%;height:100%;object-fit:cover}
+.thumb-check{position:absolute;top:6px;right:6px;background:#a78bfa;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.thumb-status{position:absolute;top:6px;left:6px;border-radius:10px;padding:2px 6px;font-size:9px;font-weight:700;color:#fff}
+.showcase-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.showcase-title{font-size:16px;font-weight:700;color:#f1f5f9}
+.showcase-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.showcase-card{cursor:zoom-in;border-radius:12px;overflow:hidden;border:1px solid #2d2d4e;background:#0d0d1a;height:200px;transition:transform 0.2s}
+.showcase-card:hover{transform:scale(1.02)}
+.showcase-card img{width:100%;height:100%;object-fit:cover}
+/* Lightbox */
+.lightbox{position:fixed;inset:0;background:#000000ee;display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.lightbox-inner{background:#1a1a2e;border-radius:16px;overflow:hidden;max-width:500px;width:100%;border:1px solid #2d2d4e;position:relative}
+.lightbox-img{height:360px;background:#0d0d1a}
+.lightbox-img img{width:100%;height:100%;object-fit:cover}
+.lightbox-body{padding:16px 20px}
+.lightbox-close{position:absolute;top:12px;right:12px;background:#0f0f23cc;color:#94a3b8;border:none;border-radius:8px;padding:6px 12px;font-size:13px}
+@media(max-width:700px){.split{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" data-presets="react,env">
-const { useState, useEffect } = React;
-const STORAGE_KEY = "watch-collection-standalone";
 
-const proxyImg = (src) => {
-  if (!src) return null;
-  if (src.startsWith("data:") || src.startsWith("blob:")) return src;
-  if (src.includes("wikimedia.org") || src.includes("wikipedia.org")) return src;
-  return `https://images.weserv.nl/?url=${encodeURIComponent(src.replace(/^https?:\/\//,""))}&w=400&h=300&fit=cover&output=jpg`;
-};
+<div class="header">
+  <div class="header-inner">
+    <div class="header-top">
+      <div>
+        <h1>⌚ Watch Tracker</h1>
+        <div class="subtitle" id="subtitle">0 owned · 0 on wishlist</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btn-view">🗂 All Together</button>
+        <button class="btn btn-green" id="btn-add">+ Add Watch</button>
+        <button class="btn" id="btn-export">⬇ Export</button>
+        <label class="btn" style="margin:0">⬆ Import<input type="file" accept=".json" id="import-input" style="display:none"></label>
+      </div>
+    </div>
+    <div class="stats" id="stats-bar"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="collection">📋 Collection</button>
+      <button class="tab" data-tab="gallery">🖼️ Gallery</button>
+    </div>
+  </div>
+</div>
 
-const fmt = (n) => n ? `$${Number(n).toLocaleString()}` : "—";
-const emptyWatch = { brand:"", model:"", ref:"", retailPrice:"", greyPrice:"", image:"", notes:"", status:"owned" };
+<div class="content" id="main-content"></div>
 
+<!-- Add/Edit Modal -->
+<div class="overlay" id="modal" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">Add Watch</h3>
+    <p>Enter a reference number and fill in details.</p>
+    <div class="form-group">
+      <label class="form-label">Reference Number</label>
+      <div class="lookup-row">
+        <input class="form-input" id="f-ref" placeholder="e.g. 126610LN" style="flex:1">
+      </div>
+    </div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">fill in details</span><div class="divider-line"></div></div>
+    <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="f-brand" placeholder="e.g. Rolex"></div>
+    <div class="form-group"><label class="form-label">Model</label><input class="form-input" id="f-model" placeholder="e.g. Submariner Date"></div>
+    <div class="form-group"><label class="form-label">Retail Price ($)</label><input class="form-input" id="f-retail" placeholder="10100" type="number"></div>
+    <div class="form-group"><label class="form-label">Grey Market Price ($)</label><input class="form-input" id="f-grey" placeholder="13500" type="number"></div>
+    <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="f-notes" placeholder="Optional notes..."></div>
+    <div class="form-group">
+      <label class="form-label">Watch Image</label>
+      <label class="upload-btn"><span>📁</span><span>Upload from device</span><input type="file" accept="image/*" id="f-img-upload" style="display:none"></label>
+      <div class="divider"><div class="divider-line"></div><span class="divider-text">or paste a URL</span><div class="divider-line"></div></div>
+      <input class="form-input" id="f-img-url" placeholder="https://...">
+      <div class="img-preview" id="img-preview" style="display:none">
+        <img id="img-preview-img" src="">
+        <button class="img-clear" id="img-clear">✕</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select class="form-input" id="f-status">
+        <option value="owned">Owned</option>
+        <option value="wishlist">Wishlist / Considering</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-purple" id="modal-save" style="flex:1">Add Watch</button>
+      <button class="btn" id="modal-cancel" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" style="display:none">
+  <div class="lightbox-inner">
+    <div class="lightbox-img"><img id="lb-img" src=""></div>
+    <div class="lightbox-body">
+      <div class="card-brand" id="lb-brand"></div>
+      <div class="card-model" id="lb-model" style="font-size:20px"></div>
+      <div class="card-ref" id="lb-ref" style="font-size:13px;margin-bottom:8px"></div>
+      <div id="lb-notes" style="color:#94a3b8;font-size:13px;font-style:italic;margin-bottom:8px"></div>
+      <div style="display:flex;gap:12px">
+        <div><div class="price-lbl">Retail</div><div class="price-val" id="lb-retail" style="color:#f1f5f9"></div></div>
+        <div><div class="price-lbl">Grey</div><div class="price-val" id="lb-grey"></div></div>
+      </div>
+    </div>
+    <button class="lightbox-close" id="lb-close">✕ Close</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'watch-tracker-v1';
 const brandColors = {
   "Rolex":["#006039","#FFD700"],"Omega":["#1a3a6b","#c0a060"],"Patek Philippe":["#1a2a4a","#c8a84b"],
   "Audemars Piguet":["#1c2b3a","#c0a060"],"IWC":["#1a1a2e","#a0b4c8"],"Jaeger-LeCoultre":["#1a2a1a","#c0b060"],
-  "Cartier":["#2a1a1a","#c8a0a0"],"Tag Heuer":["#0a0a1a","#e04040"],"Breitling":["#0a1a2a","#4080c0"],"Panerai":["#1a1a0a","#c08040"],
+  "Cartier":["#2a1a1a","#c8a0a0"],"Tag Heuer":["#0a0a1a","#e04040"],"Breitling":["#0a1a2a","#4080c0"],"Panerai":["#1a1a0a","#c08040"]
 };
 
-const WatchPlaceholder = ({ brand, model }) => {
-  const colors = brandColors[brand] || ["#1a1a2e","#a78bfa"];
-  return (
-    <div style={{width:"100%",height:"100%",background:`linear-gradient(135deg,${colors[0]} 0%,#0d0d1a 100%)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
-      <div style={{width:60,height:60,borderRadius:"50%",border:`2px solid ${colors[1]}88`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>⌚</div>
-      {brand && <div style={{color:colors[1],fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{brand}</div>}
-      {model && <div style={{color:"#64748b",fontSize:10,textAlign:"center",maxWidth:120}}>{model}</div>}
-    </div>
-  );
-};
+let watches = [];
+let editingId = null;
+let currentTab = 'collection';
+let viewMode = 'split';
+let gallerySelected = new Set();
+let galleryFilter = 'all';
 
-const ImgWithFallback = ({ src, alt, brand, model }) => {
-  const [failed, setFailed] = useState(false);
-  const proxied = proxyImg(src);
-  if (!proxied || failed) return <WatchPlaceholder brand={brand} model={model} />;
-  return <img src={proxied} alt={alt} onError={() => setFailed(true)} style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.9}} />;
-};
+// Storage
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watches)); } catch(e){} }
+function load() { try { const d = localStorage.getItem(STORAGE_KEY); if(d) watches = JSON.parse(d); } catch(e){} }
 
-const WatchCard = ({ watch, onMove, onEdit, onDelete, moveLabel }) => {
-  const greyDiff = watch.retailPrice && watch.greyPrice ? ((watch.greyPrice - watch.retailPrice) / watch.retailPrice * 100).toFixed(0) : null;
-  const premium = greyDiff > 0;
-  return (
-    <div style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:12,overflow:"hidden",display:"flex",flexDirection:"column",transition:"transform 0.2s"}}
-      onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
-      <div style={{position:"relative",height:200,background:"#0d0d1a",overflow:"hidden"}}>
-        <ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} />
-        <div style={{position:"absolute",top:8,right:8,background:watch.status==="owned"?"#16a34a":"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20}}>
-          {watch.status==="owned"?"OWNED":"WISHLIST"}
-        </div>
-      </div>
-      <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
-        <div>
-          <div style={{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{watch.brand}</div>
-          <div style={{color:"#f1f5f9",fontWeight:700,fontSize:16}}>{watch.model}</div>
-          <div style={{color:"#64748b",fontSize:12,fontFamily:"monospace"}}>Ref: {watch.ref}</div>
-        </div>
-        {watch.notes && <div style={{color:"#94a3b8",fontSize:12,fontStyle:"italic"}}>{watch.notes}</div>}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
-          <div style={{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}}>
-            <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Retail</div>
-            <div style={{color:"#f1f5f9",fontWeight:700,fontSize:14}}>{fmt(watch.retailPrice)}</div>
-          </div>
-          <div style={{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}}>
-            <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Grey Market</div>
-            <div style={{color:watch.greyPrice>watch.retailPrice?"#f97316":"#22c55e",fontWeight:700,fontSize:14}}>{fmt(watch.greyPrice)}</div>
-            {greyDiff && <div style={{fontSize:10,color:premium?"#f97316":"#22c55e"}}>{premium?`+${greyDiff}%`:`${greyDiff}%`} vs retail</div>}
-          </div>
-        </div>
-        <div style={{display:"flex",gap:6,marginTop:8}}>
-          <button onClick={()=>onMove(watch.id)} style={{flex:1,padding:"7px 0",background:watch.status==="owned"?"#7c3aed":"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>→ {moveLabel}</button>
-          <button onClick={()=>onEdit(watch)} style={{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}>✏️</button>
-          <button onClick={()=>onDelete(watch.id)} style={{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}>🗑️</button>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Format
+const fmt = n => n ? '$' + Number(n).toLocaleString() : '—';
 
-const Lightbox = ({ watch, onClose }) => (
-  <div onClick={onClose} style={{position:"fixed",inset:0,background:"#000000ee",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"#1a1a2e",borderRadius:16,overflow:"hidden",maxWidth:500,width:"100%",border:"1px solid #2d2d4e",position:"relative"}}>
-      <div style={{height:360,background:"#0d0d1a"}}><ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} /></div>
-      <div style={{padding:"16px 20px"}}>
-        <div style={{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{watch.brand}</div>
-        <div style={{color:"#f1f5f9",fontWeight:700,fontSize:20}}>{watch.model}</div>
-        <div style={{color:"#64748b",fontSize:13,fontFamily:"monospace",marginBottom:8}}>Ref: {watch.ref}</div>
-        {watch.notes && <div style={{color:"#94a3b8",fontSize:13,fontStyle:"italic",marginBottom:8}}>{watch.notes}</div>}
-        <div style={{display:"flex",gap:12}}>
-          <div><div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Retail</div><div style={{color:"#f1f5f9",fontWeight:700}}>{fmt(watch.retailPrice)}</div></div>
-          <div><div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Grey</div><div style={{color:watch.greyPrice>watch.retailPrice?"#f97316":"#22c55e",fontWeight:700}}>{fmt(watch.greyPrice)}</div></div>
-        </div>
-      </div>
-      <button onClick={onClose} style={{position:"absolute",top:12,right:12,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13}}>✕</button>
-    </div>
-  </div>
-);
-
-const GalleryTab = ({ watches }) => {
-  const [selected, setSelected] = useState(new Set());
-  const [lightbox, setLightbox] = useState(null);
-  const [filter, setFilter] = useState("all");
-  const filtered = watches.filter(w => filter==="all" || w.status===filter);
-  const toggleSelect = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
-  const showcased = selected.size>0 ? watches.filter(w=>selected.has(w.id)) : [];
-  return (
-    <div>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:4,background:"#0f0f23",borderRadius:8,padding:4}}>
-          {[["all","All"],["owned","✅ Owned"],["wishlist","🔮 Wishlist"]].map(([val,label])=>(
-            <button key={val} onClick={()=>{setFilter(val);setSelected(new Set());}}
-              style={{padding:"6px 14px",background:filter===val?"#7c3aed":"transparent",color:filter===val?"#fff":"#64748b",border:"none",borderRadius:6,cursor:"pointer",fontSize:13,fontWeight:filter===val?700:400}}>{label}</button>
-          ))}
-        </div>
-        <button onClick={()=>setSelected(new Set(filtered.map(w=>w.id)))} style={{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}>Select All</button>
-        {selected.size>0 && <button onClick={()=>setSelected(new Set())} style={{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}>Clear ({selected.size})</button>}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",gap:10,marginBottom:32}}>
-        {filtered.map(w=>(
-          <div key={w.id} onClick={()=>toggleSelect(w.id)}
-            style={{cursor:"pointer",borderRadius:10,overflow:"hidden",border:`2px solid ${selected.has(w.id)?"#a78bfa":"#1e293b"}`,background:"#0d0d1a",position:"relative",height:120}}>
-            <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
-            {selected.has(w.id) && <div style={{position:"absolute",top:6,right:6,background:"#a78bfa",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff"}}>✓</div>}
-            <div style={{position:"absolute",top:6,left:6,background:w.status==="owned"?"#16a34a":"#7c3aed",borderRadius:10,padding:"2px 6px",fontSize:9,fontWeight:700,color:"#fff"}}>{w.status==="owned"?"OWN":"WISH"}</div>
-          </div>
-        ))}
-      </div>
-      {showcased.length>0 && (
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
-            <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#f1f5f9"}}>✨ Showcase ({showcased.length})</h2>
-            <div style={{flex:1,height:1,background:"#1e293b"}} />
-            {[{label:"Retail Total",val:fmt(showcased.reduce((s,w)=>s+(w.retailPrice||0),0)),color:"#22c55e"},{label:"Grey Total",val:fmt(showcased.reduce((s,w)=>s+(w.greyPrice||0),0)),color:"#f97316"}].map(s=>(
-              <div key={s.label} style={{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"8px 14px"}}>
-                <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>{s.label}</div>
-                <div style={{color:s.color,fontWeight:700,fontSize:16}}>{s.val}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:12}}>
-            {showcased.map(w=>(
-              <div key={w.id} onClick={()=>setLightbox(w)} style={{cursor:"zoom-in",borderRadius:12,overflow:"hidden",border:"1px solid #2d2d4e",background:"#0d0d1a",transition:"transform 0.2s",height:200}}
-                onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
-                <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {filtered.length===0 && <div style={{textAlign:"center",padding:"60px 20px",color:"#334155"}}><div style={{fontSize:40,marginBottom:12}}>🖼️</div><div style={{fontSize:16,color:"#475569"}}>No watches to display</div></div>}
-      {lightbox && <Lightbox watch={lightbox} onClose={()=>setLightbox(null)} />}
-    </div>
-  );
-};
-
-function App() {
-  const [watches, setWatches] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-  const [modal, setModal] = useState(null);
-  const [tab, setTab] = useState("collection");
-  const [view, setView] = useState("split");
-  const [lookupState, setLookupState] = useState("idle");
-  const [lookupMsg, setLookupMsg] = useState("");
-
-  useEffect(() => {
-    try { const d = localStorage.getItem(STORAGE_KEY); if (d) setWatches(JSON.parse(d)); } catch(_) {}
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watches)); } catch(_) {}
-  }, [watches, loaded]);
-
-  const owned = watches.filter(w=>w.status==="owned");
-  const wishlist = watches.filter(w=>w.status==="wishlist");
-  const moveWatch = (id) => setWatches(ws=>ws.map(w=>w.id===id?{...w,status:w.status==="owned"?"wishlist":"owned"}:w));
-  const deleteWatch = (id) => setWatches(ws=>ws.filter(w=>w.id!==id));
-  const openAdd = (s="owned") => { setModal({watch:{...emptyWatch,status:s},isNew:true}); setLookupState("idle"); setLookupMsg(""); };
-  const openEdit = (w) => { setModal({watch:{...w},isNew:false}); setLookupState("idle"); setLookupMsg(""); };
-
-  const saveWatch = () => {
-    const w = modal.watch;
-    if (!w.brand||!w.model) return;
-    const parsed = {...w, retailPrice:w.retailPrice?Number(String(w.retailPrice).replace(/[^0-9]/g,"")):null, greyPrice:w.greyPrice?Number(String(w.greyPrice).replace(/[^0-9]/g,"")):null};
-    if (modal.isNew) setWatches(ws=>[...ws,{...parsed,id:Date.now()}]);
-    else setWatches(ws=>ws.map(w=>w.id===parsed.id?parsed:w));
-    setModal(null);
-  };
-
-  const exportData = () => {
-    const json = JSON.stringify(watches, null, 2);
-    const blob = new Blob([json], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href=url; a.download=`watches-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  };
-
-  const totalOwnedRetail = owned.reduce((s,w)=>s+(w.retailPrice||0),0);
-  const totalOwnedGrey = owned.reduce((s,w)=>s+(w.greyPrice||0),0);
-  const totalWishRetail = wishlist.reduce((s,w)=>s+(w.retailPrice||0),0);
-
-  if (!loaded) return <div style={{minHeight:"100vh",background:"#0a0a1a",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}}>Loading…</div>;
-
-  return (
-    <div style={{minHeight:"100vh",background:"#0a0a1a",color:"#f1f5f9",fontFamily:"system-ui,sans-serif"}}>
-      <div style={{background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)",borderBottom:"1px solid #1e293b",padding:"20px 24px"}}>
-        <div style={{maxWidth:1200,margin:"0 auto"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-            <div>
-              <h1 style={{margin:0,fontSize:24,fontWeight:800,background:"linear-gradient(90deg,#a78bfa,#60a5fa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>⌚ Watch Tracker</h1>
-              <p style={{margin:"4px 0 0",color:"#64748b",fontSize:13}}>{owned.length} owned · {wishlist.length} on wishlist</p>
-            </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {tab==="collection" && <>
-                <button onClick={()=>setView(v=>v==="split"?"all":"split")} style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>
-                  {view==="split"?"🗂 All Together":"↕ Split View"}
-                </button>
-                <button onClick={()=>openAdd("owned")} style={{padding:"8px 16px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Watch</button>
-              </>}
-              <button onClick={exportData} style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>⬇ Export</button>
-              <label style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>
-                ⬆ Import
-                <input type="file" accept=".json" style={{display:"none"}} onChange={async e=>{
-                  const file=e.target.files?.[0]; if(!file) return;
-                  try { const text=await file.text(); const data=JSON.parse(text); if(Array.isArray(data)){setWatches(data);alert(`✅ Imported ${data.length} watches!`);}else alert("❌ Invalid format."); } catch { alert("❌ Could not read file."); }
-                  e.target.value="";
-                }} />
-              </label>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:12,marginTop:16,flexWrap:"wrap"}}>
-            {[{label:"Collection Retail",val:fmt(totalOwnedRetail),color:"#22c55e"},{label:"Collection Grey Value",val:fmt(totalOwnedGrey),color:"#f97316"},{label:"Wishlist Retail",val:fmt(totalWishRetail),color:"#a78bfa"}].map(s=>(
-              <div key={s.label} style={{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"10px 16px"}}>
-                <div style={{color:"#64748b",fontSize:11,textTransform:"uppercase"}}>{s.label}</div>
-                <div style={{color:s.color,fontWeight:700,fontSize:18}}>{s.val}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"flex",gap:4,marginTop:20}}>
-            {[["collection","📋 Collection"],["gallery","🖼️ Gallery"]].map(([t,label])=>(
-              <button key={t} onClick={()=>setTab(t)}
-                style={{padding:"8px 20px",background:tab===t?"#7c3aed":"#0f0f23",color:tab===t?"#fff":"#64748b",border:`1px solid ${tab===t?"#7c3aed":"#1e293b"}`,borderRadius:"8px 8px 0 0",cursor:"pointer",fontSize:13,fontWeight:tab===t?700:400,marginBottom:-1}}>{label}</button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div style={{maxWidth:1200,margin:"0 auto",padding:"24px"}}>
-        {tab==="gallery" ? <GalleryTab watches={watches} /> :
-         watches.length===0 ? (
-          <div style={{textAlign:"center",padding:"80px 20px",color:"#334155"}}>
-            <div style={{fontSize:48,marginBottom:16}}>⌚</div>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#475569"}}>No watches yet</div>
-            <button onClick={()=>openAdd("owned")} style={{padding:"10px 24px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>+ Add First Watch</button>
-          </div>
-         ) : view==="split" ? (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
-            <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-                <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#22c55e"}}>✅ My Collection ({owned.length})</h2>
-                <button onClick={()=>openAdd("owned")} style={{padding:"5px 12px",background:"#16a34a22",color:"#22c55e",border:"1px solid #16a34a44",borderRadius:8,cursor:"pointer",fontSize:12}}>+ Add</button>
-              </div>
-              {owned.length===0 && <div style={{color:"#334155",textAlign:"center",padding:40}}>No watches yet</div>}
-              <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                {owned.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Wishlist" />)}
-              </div>
-            </div>
-            <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-                <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#a78bfa"}}>🔮 Considering ({wishlist.length})</h2>
-                <button onClick={()=>openAdd("wishlist")} style={{padding:"5px 12px",background:"#7c3aed22",color:"#a78bfa",border:"1px solid #7c3aed44",borderRadius:8,cursor:"pointer",fontSize:12}}>+ Add</button>
-              </div>
-              {wishlist.length===0 && <div style={{color:"#334155",textAlign:"center",padding:40}}>Nothing on wishlist</div>}
-              <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                {wishlist.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Collection" />)}
-              </div>
-            </div>
-          </div>
-         ) : (
-          <div>
-            <h2 style={{margin:"0 0 16px",fontSize:16,fontWeight:700,color:"#60a5fa"}}>All Watches ({watches.length})</h2>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:16}}>
-              {watches.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel={w.status==="owned"?"Move to Wishlist":"Move to Collection"} />)}
-            </div>
-          </div>
-         )}
-      </div>
-
-      {modal && (
-        <div style={{position:"fixed",inset:0,background:"#000000aa",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:20}}>
-          <div style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:16,padding:24,width:"100%",maxWidth:480,maxHeight:"90vh",overflowY:"auto"}}>
-            <h3 style={{margin:"0 0 6px",color:"#f1f5f9"}}>{modal.isNew?"Add Watch":"Edit Watch"}</h3>
-            <p style={{margin:"0 0 20px",color:"#64748b",fontSize:13}}>Fill in details manually or enter a ref number.</p>
-            {[{key:"ref",label:"Reference Number",placeholder:"e.g. 126610LN"},{key:"brand",label:"Brand",placeholder:"e.g. Rolex"},{key:"model",label:"Model",placeholder:"e.g. Submariner Date"},{key:"retailPrice",label:"Retail Price ($)",placeholder:"10100"},{key:"greyPrice",label:"Grey Market Price ($)",placeholder:"13500"},{key:"notes",label:"Notes",placeholder:"Optional notes..."}].map(f=>(
-              <div key={f.key} style={{marginBottom:14}}>
-                <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>{f.label}</label>
-                <input value={modal.watch[f.key]||""} onChange={e=>setModal(m=>({...m,watch:{...m.watch,[f.key]:e.target.value}}))} placeholder={f.placeholder}
-                  style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}} />
-              </div>
-            ))}
-            <div style={{marginBottom:14}}>
-              <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>Watch Image</label>
-              <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",background:"#0f0f23",border:"2px dashed #2d3748",borderRadius:8,cursor:"pointer",marginBottom:8,color:"#94a3b8",fontSize:13}}>
-                <span>📁</span><span>Upload from device</span>
-                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
-                  const file=e.target.files?.[0]; if(!file) return;
-                  const reader=new FileReader();
-                  reader.onload=ev=>setModal(m=>({...m,watch:{...m.watch,image:ev.target.result}}));
-                  reader.readAsDataURL(file);
-                }} />
-              </label>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                <div style={{flex:1,height:1,background:"#1e293b"}}/><span style={{color:"#475569",fontSize:11}}>or paste a URL</span><div style={{flex:1,height:1,background:"#1e293b"}}/>
-              </div>
-              <input value={modal.watch.image?.startsWith("data:")?"":(modal.watch.image||"")} onChange={e=>setModal(m=>({...m,watch:{...m.watch,image:e.target.value}}))} placeholder="https://..."
-                style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}} />
-              {modal.watch.image && (
-                <div style={{marginTop:8,height:100,borderRadius:8,overflow:"hidden",border:"1px solid #2d3748",position:"relative"}}>
-                  <ImgWithFallback src={modal.watch.image} alt="preview" brand={modal.watch.brand} model={modal.watch.model} />
-                  <button onClick={()=>setModal(m=>({...m,watch:{...m.watch,image:""}}))} style={{position:"absolute",top:4,right:4,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:6,padding:"2px 7px",cursor:"pointer",fontSize:12}}>✕</button>
-                </div>
-              )}
-            </div>
-            <div style={{marginBottom:20}}>
-              <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>Status</label>
-              <select value={modal.watch.status} onChange={e=>setModal(m=>({...m,watch:{...m.watch,status:e.target.value}}))}
-                style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}}>
-                <option value="owned">Owned</option>
-                <option value="wishlist">Wishlist / Considering</option>
-              </select>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={saveWatch} style={{flex:1,padding:"10px 0",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}}>{modal.isNew?"Add Watch":"Save Changes"}</button>
-              <button onClick={()=>setModal(null)} style={{flex:1,padding:"10px 0",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer"}}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+// Proxy image
+function proxyImg(src) {
+  if (!src) return null;
+  if (src.startsWith('data:') || src.startsWith('blob:')) return src;
+  if (src.includes('wikimedia.org') || src.includes('wikipedia.org')) return src;
+  return 'https://images.weserv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//,'')) + '&w=400&h=300&fit=cover&output=jpg';
 }
 
-ReactDOM.render(<App />, document.getElementById('root'));
+// Placeholder SVG
+function placeholderHTML(brand, model) {
+  const colors = brandColors[brand] || ['#1a1a2e','#a78bfa'];
+  return `<div class="placeholder" style="background:linear-gradient(135deg,${colors[0]},#0d0d1a)">
+    <div class="placeholder-ring" style="border:2px solid ${colors[1]}88"">⌚</div>
+    ${brand ? `<div class="placeholder-brand" style="color:${colors[1]}">${brand}</div>` : ''}
+    ${model ? `<div class="placeholder-model">${model}</div>` : ''}
+  </div>`;
+}
+
+function imgHTML(src, brand, model, style='width:100%;height:100%;object-fit:cover;opacity:0.9') {
+  const p = proxyImg(src);
+  if (!p) return placeholderHTML(brand, model);
+  return `<img src="${p}" style="${style}" onerror="this.parentNode.innerHTML=\`${placeholderHTML(brand,model).replace(/`/g,"'")}\`">`;
+}
+
+// Render
+function render() {
+  const owned = watches.filter(w => w.status === 'owned');
+  const wishlist = watches.filter(w => w.status === 'wishlist');
+  document.getElementById('subtitle').textContent = `${owned.length} owned · ${wishlist.length} on wishlist`;
+
+  // Stats
+  const totalOR = owned.reduce((s,w)=>s+(w.retailPrice||0),0);
+  const totalOG = owned.reduce((s,w)=>s+(w.greyPrice||0),0);
+  const totalWR = wishlist.reduce((s,w)=>s+(w.retailPrice||0),0);
+  document.getElementById('stats-bar').innerHTML = [
+    {l:'Collection Retail',v:fmt(totalOR),c:'#22c55e'},
+    {l:'Collection Grey Value',v:fmt(totalOG),c:'#f97316'},
+    {l:'Wishlist Retail',v:fmt(totalWR),c:'#a78bfa'},
+  ].map(s=>`<div class="stat-box"><div class="stat-label">${s.l}</div><div class="stat-val" style="color:${s.c}">${s.v}</div></div>`).join('');
+
+  // View btn
+  document.getElementById('btn-view').textContent = viewMode === 'split' ? '🗂 All Together' : '↕ Split View';
+  document.getElementById('btn-view').style.display = currentTab === 'collection' ? '' : 'none';
+  document.getElementById('btn-add').style.display = currentTab === 'collection' ? '' : 'none';
+
+  const content = document.getElementById('main-content');
+  if (currentTab === 'gallery') { renderGallery(); return; }
+
+  if (watches.length === 0) {
+    content.innerHTML = `<div class="empty-big"><div class="icon">⌚</div><div class="title">No watches yet</div><button class="btn btn-purple" onclick="openAdd('owned')" style="padding:10px 24px">+ Add First Watch</button></div>`;
+    return;
+  }
+
+  if (viewMode === 'split') {
+    content.innerHTML = `<div class="split">
+      <div>
+        <div class="col-header"><h2 class="col-title-green">✅ My Collection (${owned.length})</h2><button class="btn-sm-green" onclick="openAdd('owned')">+ Add</button></div>
+        <div class="cards" id="col-owned">${owned.length ? owned.map(w=>cardHTML(w,'Move to Wishlist')).join('') : '<div class="empty">No watches yet</div>'}</div>
+      </div>
+      <div>
+        <div class="col-header"><h2 class="col-title-purple">🔮 Considering (${wishlist.length})</h2><button class="btn-sm-purple" onclick="openAdd('wishlist')">+ Add</button></div>
+        <div class="cards" id="col-wishlist">${wishlist.length ? wishlist.map(w=>cardHTML(w,'Move to Collection')).join('') : '<div class="empty">Nothing on wishlist</div>'}</div>
+      </div>
+    </div>`;
+  } else {
+    content.innerHTML = `<div><h2 class="col-title-blue" style="margin-bottom:16px">All Watches (${watches.length})</h2>
+      <div class="all-grid">${watches.map(w=>cardHTML(w,w.status==='owned'?'Move to Wishlist':'Move to Collection')).join('')}</div></div>`;
+  }
+}
+
+function cardHTML(w, moveLabel) {
+  const greyDiff = w.retailPrice && w.greyPrice ? ((w.greyPrice - w.retailPrice) / w.retailPrice * 100).toFixed(0) : null;
+  const premium = greyDiff > 0;
+  const greyColor = (w.greyPrice||0) > (w.retailPrice||0) ? '#f97316' : '#22c55e';
+  return `<div class="card">
+    <div class="card-img">${imgHTML(w.image, w.brand, w.model)}
+      <div class="badge ${w.status==='owned'?'badge-green':'badge-purple'}">${w.status==='owned'?'OWNED':'WISHLIST'}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-brand">${w.brand||''}</div>
+      <div class="card-model">${w.model||''}</div>
+      <div class="card-ref">Ref: ${w.ref||''}</div>
+      ${w.notes ? `<div class="card-notes">${w.notes}</div>` : ''}
+      <div class="price-grid">
+        <div class="price-box"><div class="price-lbl">Retail</div><div class="price-val" style="color:#f1f5f9">${fmt(w.retailPrice)}</div></div>
+        <div class="price-box"><div class="price-lbl">Grey Market</div><div class="price-val" style="color:${greyColor}">${fmt(w.greyPrice)}</div>
+          ${greyDiff ? `<div class="price-diff" style="color:${greyColor}">${premium?'+':''}${greyDiff}% vs retail</div>` : ''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-move" style="background:${w.status==='owned'?'#7c3aed':'#16a34a'}" onclick="moveWatch('${w.id}')">→ ${moveLabel}</button>
+        <button class="btn-icon" onclick="openEdit('${w.id}')">✏️</button>
+        <button class="btn-icon" onclick="deleteWatch('${w.id}')">🗑️</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGallery() {
+  const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
+  const showcased = gallerySelected.size > 0 ? watches.filter(w => gallerySelected.has(w.id)) : [];
+
+  let html = `<div class="gallery-controls">
+    <div class="filter-group">
+      ${[['all','All'],['owned','✅ Owned'],['wishlist','🔮 Wishlist']].map(([v,l])=>
+        `<button class="filter-btn${galleryFilter===v?' active':''}" onclick="setGalleryFilter('${v}')">${l}</button>`
+      ).join('')}
+    </div>
+    <button class="btn" onclick="selectAllGallery()">Select All</button>
+    ${gallerySelected.size > 0 ? `<button class="btn" onclick="clearGallery()">Clear (${gallerySelected.size})</button>` : ''}
+  </div>
+  <div class="gallery-grid">
+    ${filtered.map(w => `
+      <div class="gallery-thumb${gallerySelected.has(w.id)?' selected':''}" onclick="toggleGallery('${w.id}')">
+        ${imgHTML(w.image, w.brand, w.model, 'width:100%;height:100%;object-fit:cover')}
+        ${gallerySelected.has(w.id) ? '<div class="thumb-check">✓</div>' : ''}
+        <div class="thumb-status" style="background:${w.status==='owned'?'#16a34a':'#7c3aed'}">${w.status==='owned'?'OWN':'WISH'}</div>
+      </div>`).join('')}
+  </div>`;
+
+  if (showcased.length > 0) {
+    const retTotal = showcased.reduce((s,w)=>s+(w.retailPrice||0),0);
+    const greyTotal = showcased.reduce((s,w)=>s+(w.greyPrice||0),0);
+    const bestTotal = showcased.reduce((s,w)=>{
+      const r=w.retailPrice||0, g=w.greyPrice||0;
+      if(r&&g) return s+Math.min(r,g);
+      return s+(r||g);
+    },0);
+
+    html += `<div>
+      <div class="showcase-header">
+        <div class="showcase-title">✨ Showcase (${showcased.length})</div>
+        <div style="flex:1;height:1px;background:#1e293b"></div>
+        ${[{l:'Retail Total',v:fmt(retTotal),c:'#22c55e'},{l:'Grey Total',v:fmt(greyTotal),c:'#f97316'},{l:'Best Price Total',v:fmt(bestTotal),c:'#60a5fa'}].map(s=>
+          `<div class="stat-box"><div class="stat-label">${s.l}</div><div class="stat-val" style="color:${s.c};font-size:16px">${s.v}</div></div>`
+        ).join('')}
+      </div>
+      <div class="showcase-grid">
+        ${showcased.map(w=>`
+          <div class="showcase-card" onclick="openLightbox('${w.id}')">
+            ${imgHTML(w.image, w.brand, w.model, 'width:100%;height:100%;object-fit:cover')}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+// Gallery actions
+function setGalleryFilter(v) { galleryFilter = v; gallerySelected = new Set(); render(); }
+function toggleGallery(id) { gallerySelected.has(id) ? gallerySelected.delete(id) : gallerySelected.add(id); render(); }
+function selectAllGallery() {
+  const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
+  gallerySelected = new Set(filtered.map(w=>w.id)); render();
+}
+function clearGallery() { gallerySelected = new Set(); render(); }
+
+function openLightbox(id) {
+  const w = watches.find(x=>x.id===id); if(!w) return;
+  const p = proxyImg(w.image);
+  document.getElementById('lb-img').src = p || '';
+  document.getElementById('lb-img').style.display = p ? '' : 'none';
+  document.getElementById('lb-brand').textContent = w.brand||'';
+  document.getElementById('lb-model').textContent = w.model||'';
+  document.getElementById('lb-ref').textContent = 'Ref: '+(w.ref||'');
+  document.getElementById('lb-notes').textContent = w.notes||'';
+  document.getElementById('lb-retail').textContent = fmt(w.retailPrice);
+  const lb_grey = document.getElementById('lb-grey');
+  lb_grey.textContent = fmt(w.greyPrice);
+  lb_grey.style.color = (w.greyPrice||0)>(w.retailPrice||0)?'#f97316':'#22c55e';
+  document.getElementById('lightbox').style.display = 'flex';
+}
+
+// Watch actions
+function moveWatch(id) {
+  watches = watches.map(w => w.id===id ? {...w, status: w.status==='owned'?'wishlist':'owned'} : w);
+  save(); render();
+}
+function deleteWatch(id) {
+  if (!confirm('Delete this watch?')) return;
+  watches = watches.filter(w => w.id!==id);
+  gallerySelected.delete(id);
+  save(); render();
+}
+
+// Modal
+let currentImg = '';
+
+function openAdd(status='owned') {
+  editingId = null;
+  currentImg = '';
+  document.getElementById('modal-title').textContent = 'Add Watch';
+  document.getElementById('modal-save').textContent = 'Add Watch';
+  ['ref','brand','model','notes'].forEach(f => document.getElementById('f-'+f).value = '');
+  document.getElementById('f-retail').value = '';
+  document.getElementById('f-grey').value = '';
+  document.getElementById('f-img-url').value = '';
+  document.getElementById('f-status').value = status;
+  updateImgPreview('');
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function openEdit(id) {
+  const w = watches.find(x=>x.id===id); if(!w) return;
+  editingId = id;
+  currentImg = w.image||'';
+  document.getElementById('modal-title').textContent = 'Edit Watch';
+  document.getElementById('modal-save').textContent = 'Save Changes';
+  document.getElementById('f-ref').value = w.ref||'';
+  document.getElementById('f-brand').value = w.brand||'';
+  document.getElementById('f-model').value = w.model||'';
+  document.getElementById('f-retail').value = w.retailPrice||'';
+  document.getElementById('f-grey').value = w.greyPrice||'';
+  document.getElementById('f-notes').value = w.notes||'';
+  document.getElementById('f-img-url').value = w.image?.startsWith('data:') ? '' : (w.image||'');
+  document.getElementById('f-status').value = w.status||'owned';
+  updateImgPreview(w.image||'');
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function updateImgPreview(src) {
+  currentImg = src;
+  const preview = document.getElementById('img-preview');
+  if (src) {
+    const p = proxyImg(src);
+    document.getElementById('img-preview-img').src = p||src;
+    preview.style.display = '';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+document.getElementById('f-img-url').addEventListener('input', e => updateImgPreview(e.target.value));
+document.getElementById('f-img-upload').addEventListener('change', e => {
+  const file = e.target.files?.[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { updateImgPreview(ev.target.result); document.getElementById('f-img-url').value = ''; };
+  reader.readAsDataURL(file);
+});
+document.getElementById('img-clear').addEventListener('click', () => { updateImgPreview(''); document.getElementById('f-img-url').value = ''; });
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const brand = document.getElementById('f-brand').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  if (!brand || !model) { alert('Brand and model are required.'); return; }
+  const w = {
+    id: editingId || Date.now().toString(),
+    brand, model,
+    ref: document.getElementById('f-ref').value.trim(),
+    retailPrice: parseFloat(document.getElementById('f-retail').value)||null,
+    greyPrice: parseFloat(document.getElementById('f-grey').value)||null,
+    notes: document.getElementById('f-notes').value.trim(),
+    image: currentImg || document.getElementById('f-img-url').value.trim(),
+    status: document.getElementById('f-status').value,
+  };
+  if (editingId) watches = watches.map(x => x.id===editingId ? w : x);
+  else watches.push(w);
+  save(); render();
+  document.getElementById('modal').style.display = 'none';
+});
+
+document.getElementById('modal-cancel').addEventListener('click', () => document.getElementById('modal').style.display = 'none');
+document.getElementById('modal').addEventListener('click', e => { if(e.target===document.getElementById('modal')) document.getElementById('modal').style.display='none'; });
+document.getElementById('lb-close').addEventListener('click', () => document.getElementById('lightbox').style.display='none');
+document.getElementById('lightbox').addEventListener('click', e => { if(e.target===document.getElementById('lightbox')) document.getElementById('lightbox').style.display='none'; });
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  currentTab = t.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  render();
+}));
+
+// View toggle
+document.getElementById('btn-view').addEventListener('click', () => { viewMode = viewMode==='split'?'all':'split'; render(); });
+document.getElementById('btn-add').addEventListener('click', () => openAdd('owned'));
+
+// Export
+document.getElementById('btn-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(watches,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`watches-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+
+// Import
+document.getElementById('import-input').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; if(!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) { watches=data; save(); render(); alert(`✅ Imported ${data.length} watches!`); }
+    else alert('❌ Invalid format.');
+  } catch { alert('❌ Could not read file.'); }
+  e.target.value='';
+});
+
+// Init
+load();
+render();
 </script>
 </body>
 </html>
