@@ -214,7 +214,7 @@ let watches = [];
 let editingId = null;
 let currentTab = 'collection';
 let viewMode = 'split';
-let gallerySelected = new Set();
+let gallerySelected = [];
 let galleryFilter = 'all';
 
 // Storage
@@ -326,7 +326,7 @@ function cardHTML(w, moveLabel) {
 
 function renderGallery() {
   const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
-  const showcased = gallerySelected.size > 0 ? watches.filter(w => gallerySelected.has(String(w.id))) : [];
+  const showcased = gallerySelected.length > 0 ? watches.filter(w => isSelected(w.id)) : [];
 
   let html = `<div class="gallery-controls">
     <div class="filter-group">
@@ -335,11 +335,11 @@ function renderGallery() {
       ).join('')}
     </div>
     <button class="btn" onclick="selectAllGallery()">Select All</button>
-    ${gallerySelected.size > 0 ? `<button class="btn" onclick="clearGallery()">Clear (${gallerySelected.size})</button>` : ''}
+    ${gallerySelected.length > 0 ? `<button class="btn" onclick="clearGallery()">Clear (${gallerySelected.length})</button>` : ''}
   </div>
   <div class="gallery-grid">
     ${filtered.map(w => `
-      <div class="gallery-thumb${gallerySelected.has(String(w.id))?' selected':''}" onclick="toggleGallery('${w.id}')">
+      <div class="gallery-thumb${isSelected(w.id)?' selected':''}" onclick="toggleGallery('${w.id}')">
         ${imgHTML(w.image, w.brand, w.model, 'width:100%;height:100%;object-fit:cover')}
         ${gallerySelected.has(w.id) ? '<div class="thumb-check">✓</div>' : ''}
         <div class="thumb-status" style="background:${w.status==='owned'?'#16a34a':'#7c3aed'}">${w.status==='owned'?'OWN':'WISH'}</div>
@@ -375,19 +375,19 @@ function renderGallery() {
   document.getElementById('main-content').innerHTML = html;
 }
 
+function isSelected(id) { return gallerySelected.some(x => String(x) === String(id)); }
 function toggleGallery(id) {
-  const strId = String(id);
-  if (gallerySelected.has(strId)) { gallerySelected.delete(strId); } else { gallerySelected.add(strId); }
+  if (isSelected(id)) { gallerySelected = gallerySelected.filter(x => String(x) !== String(id)); }
+  else { gallerySelected.push(id); }
   render();
 }
 function selectAllGallery() {
   const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
-  gallerySelected = new Set(filtered.map(w => String(w.id)));
+  gallerySelected = filtered.map(w => w.id);
   render();
 }
-function clearGallery() { gallerySelected = new Set(); render(); }
-
-function setGalleryFilter(v) { galleryFilter = v; gallerySelected = new Set(); render(); }
+function clearGallery() { gallerySelected = []; render(); }
+function setGalleryFilter(v) { galleryFilter = v; gallerySelected = []; render(); }
 
 function openLightbox(id) {
   const w = watches.find(x=>x.id===id); if(!w) return;
