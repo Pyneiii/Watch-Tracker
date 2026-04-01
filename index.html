@@ -326,7 +326,7 @@ function cardHTML(w, moveLabel) {
 
 function renderGallery() {
   const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
-  const showcased = gallerySelected.size > 0 ? watches.filter(w => gallerySelected.has(w.id)) : [];
+  const showcased = gallerySelected.size > 0 ? watches.filter(w => gallerySelected.has(String(w.id))) : [];
 
   let html = `<div class="gallery-controls">
     <div class="filter-group">
@@ -339,7 +339,7 @@ function renderGallery() {
   </div>
   <div class="gallery-grid">
     ${filtered.map(w => `
-      <div class="gallery-thumb${gallerySelected.has(w.id)?' selected':''}" onclick="toggleGallery('${w.id}')">
+      <div class="gallery-thumb${gallerySelected.has(String(w.id))?' selected':''}" onclick="toggleGallery('${w.id}')">
         ${imgHTML(w.image, w.brand, w.model, 'width:100%;height:100%;object-fit:cover')}
         ${gallerySelected.has(w.id) ? '<div class="thumb-check">✓</div>' : ''}
         <div class="thumb-status" style="background:${w.status==='owned'?'#16a34a':'#7c3aed'}">${w.status==='owned'?'OWN':'WISH'}</div>
@@ -375,14 +375,19 @@ function renderGallery() {
   document.getElementById('main-content').innerHTML = html;
 }
 
-// Gallery actions
-function setGalleryFilter(v) { galleryFilter = v; gallerySelected = new Set(); render(); }
-function toggleGallery(id) { gallerySelected.has(id) ? gallerySelected.delete(id) : gallerySelected.add(id); render(); }
+function toggleGallery(id) {
+  const strId = String(id);
+  if (gallerySelected.has(strId)) { gallerySelected.delete(strId); } else { gallerySelected.add(strId); }
+  render();
+}
 function selectAllGallery() {
   const filtered = watches.filter(w => galleryFilter === 'all' || w.status === galleryFilter);
-  gallerySelected = new Set(filtered.map(w=>w.id)); render();
+  gallerySelected = new Set(filtered.map(w => String(w.id)));
+  render();
 }
 function clearGallery() { gallerySelected = new Set(); render(); }
+
+function setGalleryFilter(v) { galleryFilter = v; gallerySelected = new Set(); render(); }
 
 function openLightbox(id) {
   const w = watches.find(x=>x.id===id); if(!w) return;
