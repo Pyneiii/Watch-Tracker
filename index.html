@@ -24,10 +24,10 @@ const proxyImg = (src) => {
   if (!src) return null;
   if (src.startsWith("data:") || src.startsWith("blob:")) return src;
   if (src.includes("wikimedia.org") || src.includes("wikipedia.org")) return src;
-  return "https://images.weserv.nl/?url=" + encodeURIComponent(src.replace(/^https?:\/\//, "")) + "&w=400&h=300&fit=cover&output=jpg";
+  return `https://images.weserv.nl/?url=${encodeURIComponent(src.replace(/^https?:\/\//,""))}&w=400&h=300&fit=cover&output=jpg`;
 };
 
-const fmt = (n) => n ? "$" + Number(n).toLocaleString() : "—";
+const fmt = (n) => n ? `$${Number(n).toLocaleString()}` : "—";
 const emptyWatch = { brand:"", model:"", ref:"", retailPrice:"", greyPrice:"", image:"", notes:"", status:"owned" };
 
 const brandColors = {
@@ -39,166 +39,137 @@ const brandColors = {
 const WatchPlaceholder = ({ brand, model }) => {
   const colors = brandColors[brand] || ["#1a1a2e","#a78bfa"];
   return (
-    React.createElement('div', {style:{width:"100%",height:"100%",background:"linear-gradient(135deg,"+colors[0]+" 0%,#0d0d1a 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}},
-      React.createElement('div', {style:{width:60,height:60,borderRadius:"50%",border:"2px solid "+colors[1]+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}, "⌚"),
-      brand && React.createElement('div', {style:{color:colors[1],fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}, brand),
-      model && React.createElement('div', {style:{color:"#64748b",fontSize:10,textAlign:"center",maxWidth:120}}, model)
-    )
+    <div style={{width:"100%",height:"100%",background:`linear-gradient(135deg,${colors[0]} 0%,#0d0d1a 100%)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
+      <div style={{width:60,height:60,borderRadius:"50%",border:`2px solid ${colors[1]}88`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>⌚</div>
+      {brand && <div style={{color:colors[1],fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}>{brand}</div>}
+      {model && <div style={{color:"#64748b",fontSize:10,textAlign:"center",maxWidth:120}}>{model}</div>}
+    </div>
   );
 };
 
 const ImgWithFallback = ({ src, alt, brand, model }) => {
   const [failed, setFailed] = useState(false);
   const proxied = proxyImg(src);
-  if (!proxied || failed) return React.createElement(WatchPlaceholder, {brand, model});
-  return React.createElement('img', {src:proxied, alt, onError:()=>setFailed(true), style:{width:"100%",height:"100%",objectFit:"cover",opacity:0.9}});
+  if (!proxied || failed) return <WatchPlaceholder brand={brand} model={model} />;
+  return <img src={proxied} alt={alt} onError={() => setFailed(true)} style={{width:"100%",height:"100%",objectFit:"cover",opacity:0.9}} />;
 };
 
 const WatchCard = ({ watch, onMove, onEdit, onDelete, moveLabel }) => {
   const greyDiff = watch.retailPrice && watch.greyPrice ? ((watch.greyPrice - watch.retailPrice) / watch.retailPrice * 100).toFixed(0) : null;
   const premium = greyDiff > 0;
   return (
-    React.createElement('div', {style:{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:12,overflow:"hidden",display:"flex",flexDirection:"column",transition:"transform 0.2s"},
-      onMouseEnter:e=>e.currentTarget.style.transform="translateY(-2px)", onMouseLeave:e=>e.currentTarget.style.transform="translateY(0)"},
-      React.createElement('div', {style:{position:"relative",height:200,background:"#0d0d1a",overflow:"hidden"}},
-        React.createElement(ImgWithFallback, {src:watch.image,alt:watch.model,brand:watch.brand,model:watch.model}),
-        React.createElement('div', {style:{position:"absolute",top:8,right:8,background:watch.status==="owned"?"#16a34a":"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20}},
-          watch.status==="owned"?"OWNED":"WISHLIST")
-      ),
-      React.createElement('div', {style:{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:6}},
-        React.createElement('div', null,
-          React.createElement('div', {style:{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}, watch.brand),
-          React.createElement('div', {style:{color:"#f1f5f9",fontWeight:700,fontSize:16}}, watch.model),
-          React.createElement('div', {style:{color:"#64748b",fontSize:12,fontFamily:"monospace"}}, "Ref: "+watch.ref)
-        ),
-        watch.notes && React.createElement('div', {style:{color:"#94a3b8",fontSize:12,fontStyle:"italic"}}, watch.notes),
-        React.createElement('div', {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}},
-          React.createElement('div', {style:{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}},
-            React.createElement('div', {style:{color:"#64748b",fontSize:10,textTransform:"uppercase"}}, "Retail"),
-            React.createElement('div', {style:{color:"#f1f5f9",fontWeight:700,fontSize:14}}, fmt(watch.retailPrice))
-          ),
-          React.createElement('div', {style:{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}},
-            React.createElement('div', {style:{color:"#64748b",fontSize:10,textTransform:"uppercase"}}, "Grey Market"),
-            React.createElement('div', {style:{color:(watch.greyPrice||0)>(watch.retailPrice||0)?"#f97316":"#22c55e",fontWeight:700,fontSize:14}}, fmt(watch.greyPrice)),
-            greyDiff && React.createElement('div', {style:{fontSize:10,color:premium?"#f97316":"#22c55e"}}, (premium?"+":"")+greyDiff+"% vs retail")
-          )
-        ),
-        React.createElement('div', {style:{display:"flex",gap:6,marginTop:8}},
-          React.createElement('button', {onClick:()=>onMove(watch.id),style:{flex:1,padding:"7px 0",background:watch.status==="owned"?"#7c3aed":"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}, "→ "+moveLabel),
-          React.createElement('button', {onClick:()=>onEdit(watch),style:{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}, "✏️"),
-          React.createElement('button', {onClick:()=>onDelete(watch.id),style:{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}, "🗑️")
-        )
-      )
-    )
+    <div style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:12,overflow:"hidden",display:"flex",flexDirection:"column",transition:"transform 0.2s"}}
+      onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+      <div style={{position:"relative",height:200,background:"#0d0d1a",overflow:"hidden"}}>
+        <ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} />
+        <div style={{position:"absolute",top:8,right:8,background:watch.status==="owned"?"#16a34a":"#7c3aed",color:"#fff",fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20}}>
+          {watch.status==="owned"?"OWNED":"WISHLIST"}
+        </div>
+      </div>
+      <div style={{padding:"14px 16px",flex:1,display:"flex",flexDirection:"column",gap:6}}>
+        <div>
+          <div style={{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{watch.brand}</div>
+          <div style={{color:"#f1f5f9",fontWeight:700,fontSize:16}}>{watch.model}</div>
+          <div style={{color:"#64748b",fontSize:12,fontFamily:"monospace"}}>Ref: {watch.ref}</div>
+        </div>
+        {watch.notes && <div style={{color:"#94a3b8",fontSize:12,fontStyle:"italic"}}>{watch.notes}</div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
+          <div style={{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}}>
+            <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Retail</div>
+            <div style={{color:"#f1f5f9",fontWeight:700,fontSize:14}}>{fmt(watch.retailPrice)}</div>
+          </div>
+          <div style={{background:"#0f0f23",borderRadius:8,padding:"8px 10px"}}>
+            <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Grey Market</div>
+            <div style={{color:watch.greyPrice>watch.retailPrice?"#f97316":"#22c55e",fontWeight:700,fontSize:14}}>{fmt(watch.greyPrice)}</div>
+            {greyDiff && <div style={{fontSize:10,color:premium?"#f97316":"#22c55e"}}>{premium?`+${greyDiff}%`:`${greyDiff}%`} vs retail</div>}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:8}}>
+          <button onClick={()=>onMove(watch.id)} style={{flex:1,padding:"7px 0",background:watch.status==="owned"?"#7c3aed":"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>→ {moveLabel}</button>
+          <button onClick={()=>onEdit(watch)} style={{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}>✏️</button>
+          <button onClick={()=>onDelete(watch.id)} style={{padding:"7px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,fontSize:12,cursor:"pointer"}}>🗑️</button>
+        </div>
+      </div>
+    </div>
   );
 };
 
 const Lightbox = ({ watch, onClose }) => (
-  React.createElement('div', {onClick:onClose,style:{position:"fixed",inset:0,background:"#000000ee",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}},
-    React.createElement('div', {onClick:e=>e.stopPropagation(),style:{background:"#1a1a2e",borderRadius:16,overflow:"hidden",maxWidth:500,width:"100%",border:"1px solid #2d2d4e",position:"relative"}},
-      React.createElement('div', {style:{height:360,background:"#0d0d1a"}},
-        React.createElement(ImgWithFallback, {src:watch.image,alt:watch.model,brand:watch.brand,model:watch.model})
-      ),
-      React.createElement('div', {style:{padding:"16px 20px"}},
-        React.createElement('div', {style:{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}, watch.brand),
-        React.createElement('div', {style:{color:"#f1f5f9",fontWeight:700,fontSize:20}}, watch.model),
-        React.createElement('div', {style:{color:"#64748b",fontSize:13,fontFamily:"monospace",marginBottom:8}}, "Ref: "+watch.ref),
-        watch.notes && React.createElement('div', {style:{color:"#94a3b8",fontSize:13,fontStyle:"italic",marginBottom:8}}, watch.notes),
-        React.createElement('div', {style:{display:"flex",gap:12}},
-          React.createElement('div', null,
-            React.createElement('div', {style:{color:"#64748b",fontSize:10,textTransform:"uppercase"}}, "Retail"),
-            React.createElement('div', {style:{color:"#f1f5f9",fontWeight:700}}, fmt(watch.retailPrice))
-          ),
-          React.createElement('div', null,
-            React.createElement('div', {style:{color:"#64748b",fontSize:10,textTransform:"uppercase"}}, "Grey"),
-            React.createElement('div', {style:{color:(watch.greyPrice||0)>(watch.retailPrice||0)?"#f97316":"#22c55e",fontWeight:700}}, fmt(watch.greyPrice))
-          )
-        )
-      ),
-      React.createElement('button', {onClick:onClose,style:{position:"absolute",top:12,right:12,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13}}, "✕ Close")
-    )
-  )
+  <div onClick={onClose} style={{position:"fixed",inset:0,background:"#000000ee",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:"#1a1a2e",borderRadius:16,overflow:"hidden",maxWidth:500,width:"100%",border:"1px solid #2d2d4e",position:"relative"}}>
+      <div style={{height:360,background:"#0d0d1a"}}><ImgWithFallback src={watch.image} alt={watch.model} brand={watch.brand} model={watch.model} /></div>
+      <div style={{padding:"16px 20px"}}>
+        <div style={{color:"#a78bfa",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>{watch.brand}</div>
+        <div style={{color:"#f1f5f9",fontWeight:700,fontSize:20}}>{watch.model}</div>
+        <div style={{color:"#64748b",fontSize:13,fontFamily:"monospace",marginBottom:8}}>Ref: {watch.ref}</div>
+        {watch.notes && <div style={{color:"#94a3b8",fontSize:13,fontStyle:"italic",marginBottom:8}}>{watch.notes}</div>}
+        <div style={{display:"flex",gap:12}}>
+          <div><div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Retail</div><div style={{color:"#f1f5f9",fontWeight:700}}>{fmt(watch.retailPrice)}</div></div>
+          <div><div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>Grey</div><div style={{color:watch.greyPrice>watch.retailPrice?"#f97316":"#22c55e",fontWeight:700}}>{fmt(watch.greyPrice)}</div></div>
+        </div>
+      </div>
+      <button onClick={onClose} style={{position:"absolute",top:12,right:12,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:13}}>✕</button>
+    </div>
+  </div>
 );
 
-const StatBox = ({label, value, color}) =>
-  React.createElement('div', {style:{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"8px 14px"}},
-    React.createElement('div', {style:{color:"#64748b",fontSize:10,textTransform:"uppercase"}}, label),
-    React.createElement('div', {style:{color,fontWeight:700,fontSize:16}}, value)
-  );
-
 const GalleryTab = ({ watches }) => {
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   const [lightbox, setLightbox] = useState(null);
   const [filter, setFilter] = useState("all");
-
-  const filtered = watches.filter(w => filter === "all" || w.status === filter);
-  const isSelected = (id) => selected.indexOf(String(id)) !== -1;
-
-  const toggleSelect = (id) => {
-    const sid = String(id);
-    setSelected(prev => prev.indexOf(sid) !== -1 ? prev.filter(x => x !== sid) : prev.concat(sid));
-  };
-
-  const showcased = watches.filter(w => isSelected(w.id));
-
-  const retTotal = showcased.reduce((s,w) => s + (w.retailPrice||0), 0);
-  const greyTotal = showcased.reduce((s,w) => s + (w.greyPrice||0), 0);
-  const bestTotal = showcased.reduce((s,w) => {
-    const r = w.retailPrice||0, g = w.greyPrice||0;
-    if (r && g) return s + Math.min(r, g);
-    return s + (r || g);
-  }, 0);
-
-  return React.createElement('div', null,
-    // Controls
-    React.createElement('div', {style:{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}},
-      React.createElement('div', {style:{display:"flex",gap:4,background:"#0f0f23",borderRadius:8,padding:4}},
-        [["all","All"],["owned","✅ Owned"],["wishlist","🔮 Wishlist"]].map(([val,label]) =>
-          React.createElement('button', {key:val, onClick:()=>{setFilter(val);setSelected([]);},
-            style:{padding:"6px 14px",background:filter===val?"#7c3aed":"transparent",color:filter===val?"#fff":"#64748b",border:"none",borderRadius:6,cursor:"pointer",fontSize:13,fontWeight:filter===val?700:400}}, label)
-        )
-      ),
-      React.createElement('button', {onClick:()=>setSelected(filtered.map(w=>String(w.id))),
-        style:{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}, "Select All"),
-      selected.length > 0 && React.createElement('button', {onClick:()=>setSelected([]),
-        style:{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}, "Clear ("+selected.length+")")
-    ),
-    // Thumbnail grid
-    React.createElement('div', {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",gap:10,marginBottom:32}},
-      filtered.map(w =>
-        React.createElement('div', {key:w.id, onClick:()=>toggleSelect(w.id),
-          style:{cursor:"pointer",borderRadius:10,overflow:"hidden",border:"2px solid "+(isSelected(w.id)?"#a78bfa":"#1e293b"),background:"#0d0d1a",position:"relative",height:120}},
-          React.createElement(ImgWithFallback, {src:w.image,alt:w.model,brand:w.brand,model:w.model}),
-          isSelected(w.id) && React.createElement('div', {style:{position:"absolute",top:6,right:6,background:"#a78bfa",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff"}}, "✓"),
-          React.createElement('div', {style:{position:"absolute",top:6,left:6,background:w.status==="owned"?"#16a34a":"#7c3aed",borderRadius:10,padding:"2px 6px",fontSize:9,fontWeight:700,color:"#fff"}}, w.status==="owned"?"OWN":"WISH")
-        )
-      )
-    ),
-    // Showcase
-    showcased.length > 0 && React.createElement('div', null,
-      React.createElement('div', {style:{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}},
-        React.createElement('h2', {style:{margin:0,fontSize:16,fontWeight:700,color:"#f1f5f9"}}, "✨ Showcase ("+showcased.length+")"),
-        React.createElement('div', {style:{flex:1,height:1,background:"#1e293b"}}),
-        React.createElement(StatBox, {label:"Retail Total", value:fmt(retTotal), color:"#22c55e"}),
-        React.createElement(StatBox, {label:"Grey Total", value:fmt(greyTotal), color:"#f97316"}),
-        React.createElement(StatBox, {label:"Best Price Total", value:fmt(bestTotal), color:"#60a5fa"})
-      ),
-      React.createElement('div', {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:12}},
-        showcased.map(w =>
-          React.createElement('div', {key:w.id, onClick:()=>setLightbox(w),
-            style:{cursor:"zoom-in",borderRadius:12,overflow:"hidden",border:"1px solid #2d2d4e",background:"#0d0d1a",height:200,transition:"transform 0.2s"},
-            onMouseEnter:e=>e.currentTarget.style.transform="scale(1.02)",
-            onMouseLeave:e=>e.currentTarget.style.transform="scale(1)"},
-            React.createElement(ImgWithFallback, {src:w.image,alt:w.model,brand:w.brand,model:w.model})
-          )
-        )
-      )
-    ),
-    filtered.length === 0 && React.createElement('div', {style:{textAlign:"center",padding:"60px 20px",color:"#334155"}},
-      React.createElement('div', {style:{fontSize:40,marginBottom:12}}, "🖼️"),
-      React.createElement('div', {style:{fontSize:16,color:"#475569"}}, "No watches to display")
-    ),
-    lightbox && React.createElement(Lightbox, {watch:lightbox, onClose:()=>setLightbox(null)})
+  const filtered = watches.filter(w => filter==="all" || w.status===filter);
+  const toggleSelect = (id) => setSelected(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
+  const showcased = selected.size>0 ? watches.filter(w=>selected.has(w.id)) : [];
+  const retTotal = showcased.reduce((s,w)=>s+(w.retailPrice||0),0);
+  const greyTotal = showcased.reduce((s,w)=>s+(w.greyPrice||0),0);
+  const bestTotal = showcased.reduce((s,w)=>{const r=w.retailPrice||0,g=w.greyPrice||0;if(r&&g)return s+Math.min(r,g);return s+(r||g);},0);
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:4,background:"#0f0f23",borderRadius:8,padding:4}}>
+          {[["all","All"],["owned","✅ Owned"],["wishlist","🔮 Wishlist"]].map(([val,label])=>(
+            <button key={val} onClick={()=>{setFilter(val);setSelected(new Set());}}
+              style={{padding:"6px 14px",background:filter===val?"#7c3aed":"transparent",color:filter===val?"#fff":"#64748b",border:"none",borderRadius:6,cursor:"pointer",fontSize:13,fontWeight:filter===val?700:400}}>{label}</button>
+          ))}
+        </div>
+        <button onClick={()=>setSelected(new Set(filtered.map(w=>w.id)))} style={{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}>Select All</button>
+        {selected.size>0 && <button onClick={()=>setSelected(new Set())} style={{padding:"6px 12px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:12}}>Clear ({selected.size})</button>}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",gap:10,marginBottom:32}}>
+        {filtered.map(w=>(
+          <div key={w.id} onClick={()=>toggleSelect(w.id)}
+            style={{cursor:"pointer",borderRadius:10,overflow:"hidden",border:`2px solid ${selected.has(w.id)?"#a78bfa":"#1e293b"}`,background:"#0d0d1a",position:"relative",height:120}}>
+            <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
+            {selected.has(w.id) && <div style={{position:"absolute",top:6,right:6,background:"#a78bfa",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff"}}>✓</div>}
+            <div style={{position:"absolute",top:6,left:6,background:w.status==="owned"?"#16a34a":"#7c3aed",borderRadius:10,padding:"2px 6px",fontSize:9,fontWeight:700,color:"#fff"}}>{w.status==="owned"?"OWN":"WISH"}</div>
+          </div>
+        ))}
+      </div>
+      {showcased.length>0 && (
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,flexWrap:"wrap"}}>
+            <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#f1f5f9"}}>✨ Showcase ({showcased.length})</h2>
+            <div style={{flex:1,height:1,background:"#1e293b"}} />
+            {[{label:"Retail Total",val:fmt(retTotal),color:"#22c55e"},{label:"Grey Total",val:fmt(greyTotal),color:"#f97316"},{label:"Best Price",val:fmt(bestTotal),color:"#60a5fa"}].map(s=>(
+              <div key={s.label} style={{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"8px 14px"}}>
+                <div style={{color:"#64748b",fontSize:10,textTransform:"uppercase"}}>{s.label}</div>
+                <div style={{color:s.color,fontWeight:700,fontSize:16}}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:12}}>
+            {showcased.map(w=>(
+              <div key={w.id} onClick={()=>setLightbox(w)} style={{cursor:"zoom-in",borderRadius:12,overflow:"hidden",border:"1px solid #2d2d4e",background:"#0d0d1a",transition:"transform 0.2s",height:200}}
+                onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+                <ImgWithFallback src={w.image} alt={w.model} brand={w.brand} model={w.model} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {filtered.length===0 && <div style={{textAlign:"center",padding:"60px 20px",color:"#334155"}}><div style={{fontSize:40,marginBottom:12}}>🖼️</div><div style={{fontSize:16,color:"#475569"}}>No watches to display</div></div>}
+      {lightbox && <Lightbox watch={lightbox} onClose={()=>setLightbox(null)} />}
+    </div>
   );
 };
 
@@ -208,6 +179,8 @@ function App() {
   const [modal, setModal] = useState(null);
   const [tab, setTab] = useState("collection");
   const [view, setView] = useState("split");
+  const [lookupState, setLookupState] = useState("idle");
+  const [lookupMsg, setLookupMsg] = useState("");
 
   useEffect(() => {
     try { const d = localStorage.getItem(STORAGE_KEY); if (d) setWatches(JSON.parse(d)); } catch(_) {}
@@ -221,167 +194,175 @@ function App() {
 
   const owned = watches.filter(w=>w.status==="owned");
   const wishlist = watches.filter(w=>w.status==="wishlist");
-  const moveWatch = (id) => setWatches(ws=>ws.map(w=>w.id===id?Object.assign({},w,{status:w.status==="owned"?"wishlist":"owned"}):w));
-  const deleteWatch = (id) => { if(!confirm("Delete this watch?")) return; setWatches(ws=>ws.filter(w=>w.id!==id)); };
-  const openAdd = (s) => setModal({watch:Object.assign({},emptyWatch,{status:s||"owned"}),isNew:true});
-  const openEdit = (w) => setModal({watch:Object.assign({},w),isNew:false});
+  const moveWatch = (id) => setWatches(ws=>ws.map(w=>w.id===id?{...w,status:w.status==="owned"?"wishlist":"owned"}:w));
+  const deleteWatch = (id) => setWatches(ws=>ws.filter(w=>w.id!==id));
+  const openAdd = (s="owned") => { setModal({watch:{...emptyWatch,status:s},isNew:true}); setLookupState("idle"); setLookupMsg(""); };
+  const openEdit = (w) => { setModal({watch:{...w},isNew:false}); setLookupState("idle"); setLookupMsg(""); };
 
   const saveWatch = () => {
     const w = modal.watch;
     if (!w.brand||!w.model) return;
-    const parsed = Object.assign({},w, {
-      retailPrice:w.retailPrice?Number(String(w.retailPrice).replace(/[^0-9]/g,"")):null,
-      greyPrice:w.greyPrice?Number(String(w.greyPrice).replace(/[^0-9]/g,"")):null
-    });
-    if (modal.isNew) setWatches(ws=>ws.concat(Object.assign({},parsed,{id:String(Date.now())})));
+    const parsed = {...w, retailPrice:w.retailPrice?Number(String(w.retailPrice).replace(/[^0-9]/g,"")):null, greyPrice:w.greyPrice?Number(String(w.greyPrice).replace(/[^0-9]/g,"")):null};
+    if (modal.isNew) setWatches(ws=>[...ws,{...parsed,id:Date.now()}]);
     else setWatches(ws=>ws.map(w=>w.id===parsed.id?parsed:w));
     setModal(null);
   };
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(watches,null,2)],{type:"application/json"});
+    const json = JSON.stringify(watches, null, 2);
+    const blob = new Blob([json], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href=url; a.download="watches-"+new Date().toISOString().slice(0,10)+".json";
+    a.href=url; a.download=`watches-${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
-  const totalOR = owned.reduce((s,w)=>s+(w.retailPrice||0),0);
-  const totalOG = owned.reduce((s,w)=>s+(w.greyPrice||0),0);
-  const totalWR = wishlist.reduce((s,w)=>s+(w.retailPrice||0),0);
+  const totalOwnedRetail = owned.reduce((s,w)=>s+(w.retailPrice||0),0);
+  const totalOwnedGrey = owned.reduce((s,w)=>s+(w.greyPrice||0),0);
+  const totalWishRetail = wishlist.reduce((s,w)=>s+(w.retailPrice||0),0);
 
-  const setField = (key, val) => setModal(m=>({...m,watch:{...m.watch,[key]:val}}));
+  if (!loaded) return <div style={{minHeight:"100vh",background:"#0a0a1a",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}}>Loading…</div>;
 
-  if (!loaded) return React.createElement('div',{style:{minHeight:"100vh",background:"#0a0a1a",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}},"Loading…");
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0a1a",color:"#f1f5f9",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)",borderBottom:"1px solid #1e293b",padding:"20px 24px"}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+            <div>
+              <h1 style={{margin:0,fontSize:24,fontWeight:800,background:"linear-gradient(90deg,#a78bfa,#60a5fa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>⌚ Watch Tracker</h1>
+              <p style={{margin:"4px 0 0",color:"#64748b",fontSize:13}}>{owned.length} owned · {wishlist.length} on wishlist</p>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {tab==="collection" && <>
+                <button onClick={()=>setView(v=>v==="split"?"all":"split")} style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>
+                  {view==="split"?"🗂 All Together":"↕ Split View"}
+                </button>
+                <button onClick={()=>openAdd("owned")} style={{padding:"8px 16px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>+ Add Watch</button>
+              </>}
+              <button onClick={exportData} style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>⬇ Export</button>
+              <label style={{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}>
+                ⬆ Import
+                <input type="file" accept=".json" style={{display:"none"}} onChange={async e=>{
+                  const file=e.target.files?.[0]; if(!file) return;
+                  try { const text=await file.text(); const data=JSON.parse(text); if(Array.isArray(data)){setWatches(data);alert(`✅ Imported ${data.length} watches!`);}else alert("❌ Invalid format."); } catch { alert("❌ Could not read file."); }
+                  e.target.value="";
+                }} />
+              </label>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:12,marginTop:16,flexWrap:"wrap"}}>
+            {[{label:"Collection Retail",val:fmt(totalOwnedRetail),color:"#22c55e"},{label:"Collection Grey Value",val:fmt(totalOwnedGrey),color:"#f97316"},{label:"Wishlist Retail",val:fmt(totalWishRetail),color:"#a78bfa"}].map(s=>(
+              <div key={s.label} style={{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"10px 16px"}}>
+                <div style={{color:"#64748b",fontSize:11,textTransform:"uppercase"}}>{s.label}</div>
+                <div style={{color:s.color,fontWeight:700,fontSize:18}}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:4,marginTop:20}}>
+            {[["collection","📋 Collection"],["gallery","🖼️ Gallery"]].map(([t,label])=>(
+              <button key={t} onClick={()=>setTab(t)}
+                style={{padding:"8px 20px",background:tab===t?"#7c3aed":"#0f0f23",color:tab===t?"#fff":"#64748b",border:`1px solid ${tab===t?"#7c3aed":"#1e293b"}`,borderRadius:"8px 8px 0 0",cursor:"pointer",fontSize:13,fontWeight:tab===t?700:400,marginBottom:-1}}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-  const s = {padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14,width:"100%"};
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"24px"}}>
+        {tab==="gallery" ? <GalleryTab watches={watches} /> :
+         watches.length===0 ? (
+          <div style={{textAlign:"center",padding:"80px 20px",color:"#334155"}}>
+            <div style={{fontSize:48,marginBottom:16}}>⌚</div>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#475569"}}>No watches yet</div>
+            <button onClick={()=>openAdd("owned")} style={{padding:"10px 24px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>+ Add First Watch</button>
+          </div>
+         ) : view==="split" ? (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#22c55e"}}>✅ My Collection ({owned.length})</h2>
+                <button onClick={()=>openAdd("owned")} style={{padding:"5px 12px",background:"#16a34a22",color:"#22c55e",border:"1px solid #16a34a44",borderRadius:8,cursor:"pointer",fontSize:12}}>+ Add</button>
+              </div>
+              {owned.length===0 && <div style={{color:"#334155",textAlign:"center",padding:40}}>No watches yet</div>}
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                {owned.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Wishlist" />)}
+              </div>
+            </div>
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <h2 style={{margin:0,fontSize:16,fontWeight:700,color:"#a78bfa"}}>🔮 Considering ({wishlist.length})</h2>
+                <button onClick={()=>openAdd("wishlist")} style={{padding:"5px 12px",background:"#7c3aed22",color:"#a78bfa",border:"1px solid #7c3aed44",borderRadius:8,cursor:"pointer",fontSize:12}}>+ Add</button>
+              </div>
+              {wishlist.length===0 && <div style={{color:"#334155",textAlign:"center",padding:40}}>Nothing on wishlist</div>}
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                {wishlist.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel="Move to Collection" />)}
+              </div>
+            </div>
+          </div>
+         ) : (
+          <div>
+            <h2 style={{margin:"0 0 16px",fontSize:16,fontWeight:700,color:"#60a5fa"}}>All Watches ({watches.length})</h2>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:16}}>
+              {watches.map(w=><WatchCard key={w.id} watch={w} onMove={moveWatch} onEdit={openEdit} onDelete={deleteWatch} moveLabel={w.status==="owned"?"Move to Wishlist":"Move to Collection"} />)}
+            </div>
+          </div>
+         )}
+      </div>
 
-  return React.createElement('div', {style:{minHeight:"100vh",background:"#0a0a1a",color:"#f1f5f9",fontFamily:"system-ui,sans-serif"}},
-    // Header
-    React.createElement('div', {style:{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderBottom:"1px solid #1e293b",padding:"20px 24px"}},
-      React.createElement('div', {style:{maxWidth:1200,margin:"0 auto"}},
-        React.createElement('div', {style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}},
-          React.createElement('div', null,
-            React.createElement('h1', {style:{margin:0,fontSize:24,fontWeight:800,background:"linear-gradient(90deg,#a78bfa,#60a5fa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}, "⌚ Watch Tracker"),
-            React.createElement('p', {style:{margin:"4px 0 0",color:"#64748b",fontSize:13}}, owned.length+" owned · "+wishlist.length+" on wishlist")
-          ),
-          React.createElement('div', {style:{display:"flex",gap:8,flexWrap:"wrap"}},
-            tab==="collection" && React.createElement(React.Fragment, null,
-              React.createElement('button', {onClick:()=>setView(v=>v==="split"?"all":"split"),style:{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}},
-                view==="split"?"🗂 All Together":"↕ Split View"),
-              React.createElement('button', {onClick:()=>openAdd("owned"),style:{padding:"8px 16px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}, "+ Add Watch")
-            ),
-            React.createElement('button', {onClick:exportData,style:{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}}, "⬇ Export"),
-            React.createElement('label', {style:{padding:"8px 16px",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer",fontSize:13}},
-              "⬆ Import",
-              React.createElement('input', {type:"file",accept:".json",style:{display:"none"},onChange:async e=>{
-                const file=e.target.files&&e.target.files[0]; if(!file) return;
-                try { const text=await file.text(); const data=JSON.parse(text); if(Array.isArray(data)){setWatches(data);alert("✅ Imported "+data.length+" watches!");}else alert("❌ Invalid format."); } catch(err) { alert("❌ Could not read file."); }
-                e.target.value="";
-              }})
-            )
-          )
-        ),
-        React.createElement('div', {style:{display:"flex",gap:12,marginTop:16,flexWrap:"wrap"}},
-          [{label:"Collection Retail",val:fmt(totalOR),color:"#22c55e"},{label:"Collection Grey Value",val:fmt(totalOG),color:"#f97316"},{label:"Wishlist Retail",val:fmt(totalWR),color:"#a78bfa"}].map(stat=>
-            React.createElement('div', {key:stat.label,style:{background:"#0f0f23",border:"1px solid #1e293b",borderRadius:10,padding:"10px 16px"}},
-              React.createElement('div', {style:{color:"#64748b",fontSize:11,textTransform:"uppercase"}}, stat.label),
-              React.createElement('div', {style:{color:stat.color,fontWeight:700,fontSize:18}}, stat.val)
-            )
-          )
-        ),
-        React.createElement('div', {style:{display:"flex",gap:4,marginTop:20}},
-          [["collection","📋 Collection"],["gallery","🖼️ Gallery"]].map(([t,label])=>
-            React.createElement('button', {key:t,onClick:()=>setTab(t),
-              style:{padding:"8px 20px",background:tab===t?"#7c3aed":"#0f0f23",color:tab===t?"#fff":"#64748b",border:"1px solid "+(tab===t?"#7c3aed":"#1e293b"),borderRadius:"8px 8px 0 0",cursor:"pointer",fontSize:13,fontWeight:tab===t?700:400,marginBottom:-1}}, label)
-          )
-        )
-      )
-    ),
-    // Content
-    React.createElement('div', {style:{maxWidth:1200,margin:"0 auto",padding:"24px"}},
-      tab==="gallery" ? React.createElement(GalleryTab, {watches}) :
-      watches.length===0 ? React.createElement('div', {style:{textAlign:"center",padding:"80px 20px",color:"#334155"}},
-        React.createElement('div', {style:{fontSize:48,marginBottom:16}}, "⌚"),
-        React.createElement('div', {style:{fontSize:18,fontWeight:700,marginBottom:8,color:"#475569"}}, "No watches yet"),
-        React.createElement('button', {onClick:()=>openAdd("owned"),style:{padding:"10px 24px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}, "+ Add First Watch")
-      ) :
-      view==="split" ? React.createElement('div', {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}},
-        React.createElement('div', null,
-          React.createElement('div', {style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
-            React.createElement('h2', {style:{margin:0,fontSize:16,fontWeight:700,color:"#22c55e"}}, "✅ My Collection ("+owned.length+")"),
-            React.createElement('button', {onClick:()=>openAdd("owned"),style:{padding:"5px 12px",background:"#16a34a22",color:"#22c55e",border:"1px solid #16a34a44",borderRadius:8,cursor:"pointer",fontSize:12}}, "+ Add")
-          ),
-          owned.length===0 && React.createElement('div', {style:{color:"#334155",textAlign:"center",padding:40}}, "No watches yet"),
-          React.createElement('div', {style:{display:"flex",flexDirection:"column",gap:16}},
-            owned.map(w=>React.createElement(WatchCard,{key:w.id,watch:w,onMove:moveWatch,onEdit:openEdit,onDelete:deleteWatch,moveLabel:"Move to Wishlist"}))
-          )
-        ),
-        React.createElement('div', null,
-          React.createElement('div', {style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}},
-            React.createElement('h2', {style:{margin:0,fontSize:16,fontWeight:700,color:"#a78bfa"}}, "🔮 Considering ("+wishlist.length+")"),
-            React.createElement('button', {onClick:()=>openAdd("wishlist"),style:{padding:"5px 12px",background:"#7c3aed22",color:"#a78bfa",border:"1px solid #7c3aed44",borderRadius:8,cursor:"pointer",fontSize:12}}, "+ Add")
-          ),
-          wishlist.length===0 && React.createElement('div', {style:{color:"#334155",textAlign:"center",padding:40}}, "Nothing on wishlist"),
-          React.createElement('div', {style:{display:"flex",flexDirection:"column",gap:16}},
-            wishlist.map(w=>React.createElement(WatchCard,{key:w.id,watch:w,onMove:moveWatch,onEdit:openEdit,onDelete:deleteWatch,moveLabel:"Move to Collection"}))
-          )
-        )
-      ) :
-      React.createElement('div', null,
-        React.createElement('h2', {style:{margin:"0 0 16px",fontSize:16,fontWeight:700,color:"#60a5fa"}}, "All Watches ("+watches.length+")"),
-        React.createElement('div', {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}},
-          watches.map(w=>React.createElement(WatchCard,{key:w.id,watch:w,onMove:moveWatch,onEdit:openEdit,onDelete:deleteWatch,moveLabel:w.status==="owned"?"Move to Wishlist":"Move to Collection"}))
-        )
-      )
-    ),
-    // Modal
-    modal && React.createElement('div', {style:{position:"fixed",inset:0,background:"#000000aa",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:20},
-      onClick:e=>{if(e.target===e.currentTarget)setModal(null);}},
-      React.createElement('div', {style:{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:16,padding:24,width:"100%",maxWidth:480,maxHeight:"90vh",overflowY:"auto"}},
-        React.createElement('h3', {style:{margin:"0 0 6px",color:"#f1f5f9"}}, modal.isNew?"Add Watch":"Edit Watch"),
-        React.createElement('p', {style:{margin:"0 0 20px",color:"#64748b",fontSize:13}}, "Fill in details below."),
-        [["ref","Reference Number","e.g. 126610LN"],["brand","Brand","e.g. Rolex"],["model","Model","e.g. Submariner Date"],["retailPrice","Retail Price ($)","10100"],["greyPrice","Grey Market Price ($)","13500"],["notes","Notes","Optional notes..."]].map(([key,label,ph])=>
-          React.createElement('div', {key,style:{marginBottom:14}},
-            React.createElement('label', {style:{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}, label),
-            React.createElement('input', {value:modal.watch[key]||"",onChange:e=>setField(key,e.target.value),placeholder:ph,style:s})
-          )
-        ),
-        React.createElement('div', {style:{marginBottom:14}},
-          React.createElement('label', {style:{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}, "Watch Image"),
-          React.createElement('label', {style:{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",background:"#0f0f23",border:"2px dashed #2d3748",borderRadius:8,cursor:"pointer",marginBottom:8,color:"#94a3b8",fontSize:13}},
-            "📁 Upload from device",
-            React.createElement('input', {type:"file",accept:"image/*",style:{display:"none"},onChange:e=>{
-              const file=e.target.files&&e.target.files[0]; if(!file) return;
-              const reader=new FileReader();
-              reader.onload=ev=>setField("image",ev.target.result);
-              reader.readAsDataURL(file);
-            }})
-          ),
-          React.createElement('input', {value:(modal.watch.image&&modal.watch.image.startsWith("data:"))?"":(modal.watch.image||""),
-            onChange:e=>setField("image",e.target.value),placeholder:"https://...",style:s}),
-          modal.watch.image && React.createElement('div', {style:{marginTop:8,height:100,borderRadius:8,overflow:"hidden",border:"1px solid #2d3748",position:"relative"}},
-            React.createElement(ImgWithFallback, {src:modal.watch.image,alt:"preview",brand:modal.watch.brand,model:modal.watch.model}),
-            React.createElement('button', {onClick:()=>setField("image",""),style:{position:"absolute",top:4,right:4,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:6,padding:"2px 7px",cursor:"pointer",fontSize:12}}, "✕")
-          )
-        ),
-        React.createElement('div', {style:{marginBottom:20}},
-          React.createElement('label', {style:{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}, "Status"),
-          React.createElement('select', {value:modal.watch.status,onChange:e=>setField("status",e.target.value),style:s},
-            React.createElement('option', {value:"owned"}, "Owned"),
-            React.createElement('option', {value:"wishlist"}, "Wishlist / Considering")
-          )
-        ),
-        React.createElement('div', {style:{display:"flex",gap:10}},
-          React.createElement('button', {onClick:saveWatch,style:{flex:1,padding:"10px 0",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}}, modal.isNew?"Add Watch":"Save Changes"),
-          React.createElement('button', {onClick:()=>setModal(null),style:{flex:1,padding:"10px 0",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer"}}, "Cancel")
-        )
-      )
-    )
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"#000000aa",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:20}}>
+          <div style={{background:"#1a1a2e",border:"1px solid #2d2d4e",borderRadius:16,padding:24,width:"100%",maxWidth:480,maxHeight:"90vh",overflowY:"auto"}}>
+            <h3 style={{margin:"0 0 6px",color:"#f1f5f9"}}>{modal.isNew?"Add Watch":"Edit Watch"}</h3>
+            <p style={{margin:"0 0 20px",color:"#64748b",fontSize:13}}>Fill in details manually or enter a ref number.</p>
+            {[{key:"ref",label:"Reference Number",placeholder:"e.g. 126610LN"},{key:"brand",label:"Brand",placeholder:"e.g. Rolex"},{key:"model",label:"Model",placeholder:"e.g. Submariner Date"},{key:"retailPrice",label:"Retail Price ($)",placeholder:"10100"},{key:"greyPrice",label:"Grey Market Price ($)",placeholder:"13500"},{key:"notes",label:"Notes",placeholder:"Optional notes..."}].map(f=>(
+              <div key={f.key} style={{marginBottom:14}}>
+                <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>{f.label}</label>
+                <input value={modal.watch[f.key]||""} onChange={e=>setModal(m=>({...m,watch:{...m.watch,[f.key]:e.target.value}}))} placeholder={f.placeholder}
+                  style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}} />
+              </div>
+            ))}
+            <div style={{marginBottom:14}}>
+              <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>Watch Image</label>
+              <label style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",background:"#0f0f23",border:"2px dashed #2d3748",borderRadius:8,cursor:"pointer",marginBottom:8,color:"#94a3b8",fontSize:13}}>
+                <span>📁</span><span>Upload from device</span>
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+                  const file=e.target.files?.[0]; if(!file) return;
+                  const reader=new FileReader();
+                  reader.onload=ev=>setModal(m=>({...m,watch:{...m.watch,image:ev.target.result}}));
+                  reader.readAsDataURL(file);
+                }} />
+              </label>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <div style={{flex:1,height:1,background:"#1e293b"}}/><span style={{color:"#475569",fontSize:11}}>or paste a URL</span><div style={{flex:1,height:1,background:"#1e293b"}}/>
+              </div>
+              <input value={modal.watch.image?.startsWith("data:")?"":(modal.watch.image||"")} onChange={e=>setModal(m=>({...m,watch:{...m.watch,image:e.target.value}}))} placeholder="https://..."
+                style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}} />
+              {modal.watch.image && (
+                <div style={{marginTop:8,height:100,borderRadius:8,overflow:"hidden",border:"1px solid #2d3748",position:"relative"}}>
+                  <ImgWithFallback src={modal.watch.image} alt="preview" brand={modal.watch.brand} model={modal.watch.model} />
+                  <button onClick={()=>setModal(m=>({...m,watch:{...m.watch,image:""}}))} style={{position:"absolute",top:4,right:4,background:"#0f0f23cc",color:"#94a3b8",border:"none",borderRadius:6,padding:"2px 7px",cursor:"pointer",fontSize:12}}>✕</button>
+                </div>
+              )}
+            </div>
+            <div style={{marginBottom:20}}>
+              <label style={{display:"block",color:"#94a3b8",fontSize:12,marginBottom:4}}>Status</label>
+              <select value={modal.watch.status} onChange={e=>setModal(m=>({...m,watch:{...m.watch,status:e.target.value}}))}
+                style={{width:"100%",padding:"9px 12px",background:"#0f0f23",border:"1px solid #2d3748",borderRadius:8,color:"#f1f5f9",fontSize:14}}>
+                <option value="owned">Owned</option>
+                <option value="wishlist">Wishlist / Considering</option>
+              </select>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={saveWatch} style={{flex:1,padding:"10px 0",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontWeight:700,cursor:"pointer"}}>{modal.isNew?"Add Watch":"Save Changes"}</button>
+              <button onClick={()=>setModal(null)} style={{flex:1,padding:"10px 0",background:"#1e293b",color:"#94a3b8",border:"1px solid #2d3748",borderRadius:8,cursor:"pointer"}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-ReactDOM.render(React.createElement(App), document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById('root'));
 </script>
 </body>
 </html>
